@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from flask import Flask
 # Importamos las extensiones y los modelos que usaremos
 from flask_login import LoginManager
-from models import db, Usuario
+from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
@@ -116,6 +116,65 @@ def create_app():
         # Obtenemos todos los usuarios y los ordenamos por ID
         usuarios = Usuario.query.order_by(Usuario.id).all()
         return render_template('admin_panel.html', usuarios=usuarios)
+    
+    @app.route('/admin/crear_usuario', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def crear_usuario():
+        if request.method == 'POST':
+            # 1. Recolectamos los datos del formulario
+            rut = request.form.get('rut')
+            nombre = request.form.get('nombre_completo')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            rol_id = request.form.get('rol_id')
+            unidad_id = request.form.get('unidad_id')
+            establecimiento_id = request.form.get('establecimiento_id')
+            calidad_id = request.form.get('calidad_id')
+            categoria_id = request.form.get('categoria_id')
+
+            # 2. Verificamos si el email o RUT ya existen
+            if Usuario.query.filter_by(email=email).first():
+                flash('El correo electrónico ya está registrado.', 'danger')
+                return redirect(url_for('crear_usuario'))
+            if Usuario.query.filter_by(rut=rut).first():
+                flash('El RUT ya está registrado.', 'danger')
+                return redirect(url_for('crear_usuario'))
+
+            # 3. Creamos la nueva instancia de Usuario
+            nuevo_usuario = Usuario(
+                rut=rut,
+                nombre_completo=nombre,
+                email=email,
+                rol_id=rol_id,
+                unidad_id=unidad_id,
+                establecimiento_id=establecimiento_id,
+                calidad_juridica_id=calidad_id,
+                categoria_id=categoria_id
+            )
+            # Hasheamos la contraseña
+            nuevo_usuario.set_password(password)
+
+            # 4. Guardamos en la base de datos
+            db.session.add(nuevo_usuario)
+            db.session.commit()
+
+            flash('Usuario creado con éxito.', 'success')
+            return redirect(url_for('admin_panel'))
+
+        # Si el método es GET, cargamos los datos para los menús desplegables
+        roles = Rol.query.order_by(Rol.nombre).all()
+        unidades = Unidad.query.order_by(Unidad.nombre).all()
+        establecimientos = Establecimiento.query.order_by(Establecimiento.nombre).all()
+        calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
+        categorias = Categoria.query.order_by(Categoria.nombre).all()
+
+        return render_template('crear_usuario.html', 
+                               roles=roles, 
+                               unidades=unidades, 
+                               establecimientos=establecimientos, 
+                               calidades=calidades, 
+                               categorias=categorias)
     
     return app
 
