@@ -3,8 +3,14 @@
 import os
 from dotenv import load_dotenv
 from flask import Flask
-# ¡Importante! Importamos 'db' desde nuestro nuevo archivo models.py
-from models import db
+# Importamos las extensiones y los modelos que usaremos
+from flask_login import LoginManager
+from models import db, Usuario
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash
+# Inicializamos el gestor de logins
+login_manager = LoginManager()
 
 def create_app():
     """Crea y configura la aplicación Flask."""
@@ -31,15 +37,72 @@ def create_app():
     # Conectamos nuestra instancia 'db' (importada de models) con la aplicación.
     db.init_app(app)
 
-    # --- RUTAS (BLUEPRINTS) ---
-    # (Aquí registraremos nuestras rutas más adelante)
+    # Conectamos el gestor de logins con la aplicación
+    login_manager.init_app(app)
+    
+    # Le decimos a Flask-Login cuál es la página de inicio de sesión.
+    # Si un usuario no autenticado intenta acceder a una página protegida, será redirigido aquí.
+    login_manager.login_view = 'login' 
+    login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
+    login_manager.login_message_category = 'warning' # Para que los mensajes flash se vean bonitos
 
-    # --- Ruta de prueba para verificar que todo funciona ---
+    # --- RUTAS ---
     @app.route('/')
     def index():
-        return "¡Hola Mundo! La aplicación Flask está funcionando y conectada con los modelos."
+        # Redirigimos a la página de login por defecto
+        from flask import redirect, url_for
+        return redirect(url_for('login'))
+    
+    # --- RUTAS DE AUTENTICACIÓN ---
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        # Si el usuario ya está autenticado, lo redirigimos al menú
+        if current_user.is_authenticated:
+            return redirect(url_for('menu'))
 
+        if request.method == 'POST':
+            email = request.form.get('email')
+            password = request.form.get('password')
+            
+            # Buscamos al usuario por su email en la base de datos
+            usuario = Usuario.query.filter_by(email=email).first()
+
+            # Verificamos si el usuario existe y si la contraseña es correcta
+            if not usuario or not usuario.check_password(password):
+                flash('Email o contraseña incorrectos. Por favor, inténtalo de nuevo.', 'danger')
+                return redirect(url_for('login'))
+            
+            # Si todo es correcto, iniciamos la sesión del usuario
+            login_user(usuario)
+            flash('¡Has iniciado sesión correctamente!', 'success')
+            return redirect(url_for('menu'))
+
+        # Si el método es GET, simplemente mostramos la página de login
+        return render_template('login.html')
+
+    @app.route('/logout')
+    @login_required # Solo un usuario logueado puede desloguearse
+    def logout():
+        logout_user()
+        flash('Has cerrado la sesión.', 'success')
+        return redirect(url_for('login'))
+        
+    # --- RUTA PROTEGIDA DE EJEMPLO ---
+
+    @app.route('/menu')
+    @login_required # Esta es la magia: solo usuarios logueados pueden ver esta página
+    def menu():
+        return render_template('menu.html')
+    
     return app
+
+# --- USER LOADER ---
+# Esta función es crucial. Flask-Login la usa para recargar el objeto de usuario 
+# desde el ID de usuario almacenado en la sesión.
+@login_manager.user_loader
+def load_user(user_id):
+    # Simplemente le pide a SQLAlchemy que encuentre el usuario por su ID.
+    return Usuario.query.get(int(user_id))
 
 # Creamos la aplicación para poder ejecutarla
 app = create_app()
