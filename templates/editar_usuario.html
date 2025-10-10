@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Editar Usuario{% endblock %}
+{% block content %}
+<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-4xl mx-auto my-12">
+    <div class="border-b pb-4 mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Editando a: <span class="text-blue-600">{{ usuario.nombre_completo }}</span></h2>
+    </div>
+
+    <form method="post" class="space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-6">
+                <div>
+                    <label for="nombre_completo" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                    <input type="text" name="nombre_completo" value="{{ usuario.nombre_completo }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div>
+                    <label for="rut" class="block text-sm font-medium text-gray-700">RUT</label>
+                    <input type="text" name="rut" value="{{ usuario.rut }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" name="email" value="{{ usuario.email }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
+                    <input type="password" name="password" placeholder="Dejar en blanco para no cambiar" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <label for="rol_id" class="block text-sm font-medium text-gray-700">Rol</label>
+                    <select name="rol_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        {% for rol in roles %}
+                            <option value="{{ rol.id }}" {% if rol.id == usuario.rol_id %}selected{% endif %}>{{ rol.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="unidad_id" class="block text-sm font-medium text-gray-700">Unidad</label>
+                    <select name="unidad_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        {% for unidad in unidades %}
+                            <option value="{{ unidad.id }}" {% if unidad.id == usuario.unidad_id %}selected{% endif %}>{{ unidad.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="establecimiento_id" class="block text-sm font-medium text-gray-700">Establecimiento</label>
+                    <select name="establecimiento_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        {% for est in establecimientos %}
+                            <option value="{{ est.id }}" {% if est.id == usuario.establecimiento_id %}selected{% endif %}>{{ est.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                 <div>
+                    <label for="calidad_id" class="block text-sm font-medium text-gray-700">Calidad Jurídica</label>
+                    <select name="calidad_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        {% for calidad in calidades %}
+                            <option value="{{ calidad.id }}" {% if calidad.id == usuario.calidad_juridica_id %}selected{% endif %}>{{ calidad.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                 <div>
+                    <label for="categoria_id" class="block text-sm font-medium text-gray-700">Categoría</label>
+                    <select name="categoria_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if cat.id == usuario.categoria_id %}selected{% endif %}>{{ cat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-4 pt-6 border-t mt-8">
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

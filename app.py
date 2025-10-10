@@ -175,6 +175,48 @@ def create_app():
                                establecimientos=establecimientos, 
                                calidades=calidades, 
                                categorias=categorias)
+    @app.route('/admin/editar_usuario/<int:id>', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def editar_usuario(id):
+        # Usamos get_or_404 para obtener el usuario o devolver un error 404 si no existe
+        usuario_a_editar = Usuario.query.get_or_404(id)
+
+        if request.method == 'POST':
+            # Actualizamos los datos del usuario con la información del formulario
+            usuario_a_editar.rut = request.form.get('rut')
+            usuario_a_editar.nombre_completo = request.form.get('nombre_completo')
+            usuario_a_editar.email = request.form.get('email')
+            usuario_a_editar.rol_id = request.form.get('rol_id')
+            usuario_a_editar.unidad_id = request.form.get('unidad_id')
+            usuario_a_editar.establecimiento_id = request.form.get('establecimiento_id')
+            usuario_a_editar.calidad_juridica_id = request.form.get('calidad_id')
+            usuario_a_editar.categoria_id = request.form.get('categoria_id')
+
+            # Opcional: Actualizar la contraseña solo si se proporciona una nueva
+            password = request.form.get('password')
+            if password:
+                usuario_a_editar.set_password(password)
+            
+            # Guardamos los cambios en la base de datos
+            db.session.commit()
+            flash('Usuario actualizado con éxito.', 'success')
+            return redirect(url_for('admin_panel'))
+
+        # Si es GET, mostramos el formulario con los datos actuales del usuario
+        roles = Rol.query.order_by(Rol.nombre).all()
+        unidades = Unidad.query.order_by(Unidad.nombre).all()
+        establecimientos = Establecimiento.query.order_by(Establecimiento.nombre).all()
+        calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
+        categorias = Categoria.query.order_by(Categoria.nombre).all()
+
+        return render_template('editar_usuario.html', 
+                               usuario=usuario_a_editar,
+                               roles=roles, 
+                               unidades=unidades, 
+                               establecimientos=establecimientos, 
+                               calidades=calidades, 
+                               categorias=categorias)
     
     return app
 
