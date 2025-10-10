@@ -9,8 +9,21 @@ from models import db, Usuario
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
+from functools import wraps
+from flask import abort
+from flask_login import current_user
 # Inicializamos el gestor de logins
 login_manager = LoginManager()
+
+# --- DECORADOR DE ROL ---
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Si el usuario no es admin, mostramos un error de "no autorizado"
+        if not current_user.is_authenticated or current_user.rol.nombre != 'Admin':
+            abort(403) # Error 403: Forbidden
+        return f(*args, **kwargs)
+    return decorated_function
 
 def create_app():
     """Crea y configura la aplicación Flask."""
@@ -45,6 +58,7 @@ def create_app():
     login_manager.login_view = 'login' 
     login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
     login_manager.login_message_category = 'warning' # Para que los mensajes flash se vean bonitos
+
 
     # --- RUTAS ---
     @app.route('/')
@@ -93,6 +107,15 @@ def create_app():
     @login_required # Esta es la magia: solo usuarios logueados pueden ver esta página
     def menu():
         return render_template('menu.html')
+    
+    # --- RUTAS DEL PANEL DE ADMINISTRACIÓN ---
+    @app.route('/admin/panel')
+    @login_required
+    @admin_required # ¡Aplicamos nuestro decorador personalizado!
+    def admin_panel():
+        # Obtenemos todos los usuarios y los ordenamos por ID
+        usuarios = Usuario.query.order_by(Usuario.id).all()
+        return render_template('admin_panel.html', usuarios=usuarios)
     
     return app
 
