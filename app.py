@@ -70,9 +70,12 @@ def create_app():
     # --- RUTAS DE AUTENTICACIÓN ---
     @app.route('/login', methods=['GET', 'POST'])
     def login():
-        # Si el usuario ya está autenticado, lo redirigimos al menú
+        # Si el usuario ya está autenticado, lo redirigimos a su panel correspondiente
         if current_user.is_authenticated:
-            return redirect(url_for('menu'))
+            if current_user.rol.nombre == 'Admin':
+                return redirect(url_for('admin_panel'))
+            else:
+                return redirect(url_for('mi_hoja_de_vida'))
 
         if request.method == 'POST':
             email = request.form.get('email')
@@ -95,7 +98,13 @@ def create_app():
             # Si todo es correcto, iniciamos la sesión del usuario
             login_user(usuario)
             flash('¡Has iniciado sesión correctamente!', 'success')
-            return redirect(url_for('menu'))
+            # --- LÓGICA DE REDIRECCIÓN POR ROL ---
+            if usuario.rol.nombre == 'Admin':
+                return redirect(url_for('admin_panel'))
+            # elif usuario.rol.nombre == 'Jefe':
+                # return redirect(url_for('panel_jefe')) # Próximamente
+            else: # Para Jefes (temporalmente) y Funcionarios
+                return redirect(url_for('mi_hoja_de_vida'))
 
         # Si el método es GET, simplemente mostramos la página de login
         return render_template('login.html')
@@ -106,13 +115,6 @@ def create_app():
         logout_user()
         flash('Has cerrado la sesión.', 'success')
         return redirect(url_for('login'))
-        
-    # --- RUTA PROTEGIDA DE EJEMPLO ---
-
-    @app.route('/menu')
-    @login_required # Esta es la magia: solo usuarios logueados pueden ver esta página
-    def menu():
-        return render_template('menu.html')
     
     # --- RUTAS DEL PANEL DE ADMINISTRACIÓN ---
     @app.route('/admin/panel')
@@ -244,6 +246,14 @@ def create_app():
             flash(f'El usuario {usuario.nombre_completo} ha sido desactivado.', 'warning')
             
         return redirect(url_for('admin_panel'))
+    
+     # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---
+    @app.route('/hoja_de_vida')
+    @login_required
+    def mi_hoja_de_vida():
+        # En el futuro, aquí consultaremos las anotaciones del usuario
+        # anotaciones = Anotacion.query.filter_by(funcionario_id=current_user.id).all()
+        return render_template('mi_hoja_de_vida.html')
     
     return app
 
