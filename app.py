@@ -81,6 +81,12 @@ def create_app():
             # Buscamos al usuario por su email en la base de datos
             usuario = Usuario.query.filter_by(email=email).first()
 
+            # Verificamos primero si el usuario existe, y LUEGO si está activo.
+            if usuario:
+                if not usuario.activo:
+                    flash('Tu cuenta ha sido desactivada. Por favor, contacta a un administrador.', 'danger')
+                    return redirect(url_for('login'))
+
             # Verificamos si el usuario existe y si la contraseña es correcta
             if not usuario or not usuario.check_password(password):
                 flash('Email o contraseña incorrectos. Por favor, inténtalo de nuevo.', 'danger')
@@ -217,6 +223,27 @@ def create_app():
                                establecimientos=establecimientos, 
                                calidades=calidades, 
                                categorias=categorias)
+    
+    @app.route('/admin/toggle_activo/<int:id>', methods=['POST'])
+    @login_required
+    @admin_required
+    def toggle_activo(id):
+        # Buscamos al usuario
+        usuario = Usuario.query.get_or_404(id)
+        
+        # Invertimos su estado actual
+        usuario.activo = not usuario.activo
+        
+        # Guardamos el cambio
+        db.session.commit()
+        
+        # Enviamos un mensaje de confirmación
+        if usuario.activo:
+            flash(f'El usuario {usuario.nombre_completo} ha sido activado.', 'success')
+        else:
+            flash(f'El usuario {usuario.nombre_completo} ha sido desactivado.', 'warning')
+            
+        return redirect(url_for('admin_panel'))
     
     return app
 

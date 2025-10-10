@@ -40,9 +40,17 @@
                         <span class="bg-red-200 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Inactivo</span>
                     {% endif %}
                 </td>
-                <td class="py-3 px-4 text-center">
-                    <a href="{{ url_for('editar_usuario', id=usuario.id) }}" class="btn btn-secondary">Editar</a>
-                </td>
+                <td class="py-3 px-4 text-center flex justify-center gap-2">
+            <a href="{{ url_for('editar_usuario', id=usuario.id) }}" class="btn btn-secondary">Editar</a>
+            
+            <form action="{{ url_for('toggle_activo', id=usuario.id) }}" method="POST">
+                {% if usuario.activo %}
+                    <button type="submit" class="btn btn-warning">Desactivar</button>
+                {% else %}
+                    <button type="submit" class="btn btn-primary">Activar</button>
+                {% endif %}
+            </form>
+        </td>
             </tr>
             {% else %}
             <tr>
