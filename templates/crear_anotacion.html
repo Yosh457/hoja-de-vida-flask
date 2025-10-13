@@ -28,8 +28,8 @@
 
         <div>
             <label for="subfactor_id" class="block text-sm font-medium text-gray-700">Sub-Factor Asociado</label>
-            <select name="subfactor_id" id="subfactor-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                <option value="" disabled selected>Selecciona un sub-factor</option>
+            <select name="subfactor_id" id="subfactor-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required disabled>
+                <option value="" disabled selected>Selecciona un factor primero...</option>
                 {% for subfactor in subfactores %}
                     <option value="{{ subfactor.id }}" data-factor-id="{{ subfactor.factor_id }}">{{ subfactor.factor.nombre }} - {{ subfactor.nombre }}</option>
                 {% endfor %}
@@ -47,4 +47,7 @@
         </div>
     </form>
 </div>
+
+<script src="{{ url_for('static', filename='form_helper.js') }}"></script>
+
 {% endblock %}
