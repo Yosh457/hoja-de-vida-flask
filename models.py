@@ -106,7 +106,7 @@ class Anotacion(db.Model):
     tipo = db.Column(db.Enum('Favorable', 'Desfavorable'), nullable=False)
     motivo_jefe = db.Column(db.Text, nullable=False)
     observacion_funcionario = db.Column(db.Text)
-    estado = db.Column(db.Enum('Pendiente', 'Leída'), default='Pendiente')
+    estado = db.Column(db.Enum('Pendiente', 'Aceptada'), default='Pendiente')
     fecha_creacion = db.Column(db.Date, nullable=False)
     fecha_aceptacion = db.Column(db.DateTime)
     

@@ -365,7 +365,7 @@ def create_app():
             # Verificamos que el checkbox 'tomo_conocimiento' haya sido marcado
             if 'tomo_conocimiento' in request.form:
                 # Actualizamos el estado de la anotación
-                anotacion.estado = 'Leída'
+                anotacion.estado = 'Aceptada'
                 anotacion.fecha_aceptacion = datetime.now() # Guardamos fecha y hora
                 
                 # Guardamos las observaciones del funcionario (si las hay)
