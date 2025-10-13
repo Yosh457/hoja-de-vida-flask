@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %} - Sistema Hoja de Vida</title>
-    
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +16,7 @@
         {% if messages %}
             <div class="absolute top-5 w-full max-w-lg mx-auto z-50 px-4">
                 {% for category, message in messages %}
-                    <div class="p-4 mb-4 text-sm rounded-lg shadow-lg
+                    <div class="flash-message p-4 mb-4 text-sm rounded-lg shadow-lg
                         {% if category == 'success' %} bg-green-100 text-green-800
                         {% elif category == 'danger' %} bg-red-100 text-red-800
                         {% else %} bg-yellow-100 text-yellow-800 {% endif %}"
@@ -40,9 +39,6 @@
             <button id="stay-connected-btn" class="btn btn-primary">Permanecer Conectado</button>
         </div>
     </div>
-    
-    {% if current_user.is_authenticated %}
-    <script src="{{ url_for('static', filename='inactivity.js') }}"></script>
-    {% endif %}
+    <script src="{{ url_for('static', filename='flash_messages.js') }}"></script>
 </body>
 </html>

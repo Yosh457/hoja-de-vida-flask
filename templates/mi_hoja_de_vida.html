@@ -46,9 +46,9 @@
                         <td class="py-3 px-4">{{ anotacion.jefe.nombre_completo }}</td>
                         <td class="py-3 px-4 text-center">
                             {% if anotacion.estado == 'Pendiente' %}
-                                <span class="bg-yellow-200 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Pendiente de Lectura</span>
+                                <span class="bg-yellow-200 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Pendiente</span>
                             {% else %}
-                                <span class="bg-blue-200 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Leída</span>
+                                <span class="bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Aceptada</span>
                             {% endif %}
                         </td>
                         <td class="py-3 px-4 text-center">
