@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 from flask import Flask
 # Importamos las extensiones y los modelos que usaremos
 from flask_login import LoginManager
-from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria
+from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor
+from datetime import date, datetime
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
@@ -271,9 +272,10 @@ def create_app():
     @app.route('/hoja_de_vida')
     @login_required
     def mi_hoja_de_vida():
-        # En el futuro, aquí consultaremos las anotaciones del usuario
-        # anotaciones = Anotacion.query.filter_by(funcionario_id=current_user.id).all()
-        return render_template('mi_hoja_de_vida.html')
+        # Buscamos todas las anotaciones del usuario logueado, ordenadas por fecha de creación descendente.
+        anotaciones = Anotacion.query.filter_by(funcionario_id=current_user.id).order_by(Anotacion.fecha_creacion.desc()).all()
+        
+        return render_template('mi_hoja_de_vida.html', anotaciones=anotaciones)
     
     # --- RUTAS DEL PANEL DE JEFE ---
     @app.route('/jefe/panel')
@@ -285,6 +287,78 @@ def create_app():
         subordinados = Usuario.query.filter_by(jefe_directo_id=current_user.id).order_by(Usuario.nombre_completo).all()
         
         return render_template('panel_jefe.html', subordinados=subordinados)
+    
+    @app.route('/jefe/crear_anotacion/<int:funcionario_id>', methods=['GET', 'POST'])
+    @login_required
+    @jefe_required
+    def crear_anotacion(funcionario_id):
+        # Obtenemos los datos del funcionario que recibirá la anotación
+        funcionario = Usuario.query.get_or_404(funcionario_id)
+
+        if request.method == 'POST':
+            # Recolectamos los datos del formulario
+            tipo = request.form.get('tipo')
+            subfactor_id = request.form.get('subfactor_id')
+            motivo = request.form.get('motivo_jefe')
+
+            # Creamos la nueva anotación
+            nueva_anotacion = Anotacion(
+                tipo=tipo,
+                motivo_jefe=motivo,
+                fecha_creacion=date.today(), # Usamos la fecha actual
+                funcionario_id=funcionario.id, # El ID del funcionario de la URL
+                jefe_id=current_user.id, # El ID del jefe que está logueado
+                subfactor_id=subfactor_id
+            )
+
+            # Guardamos en la base de datos
+            db.session.add(nueva_anotacion)
+            db.session.commit()
+
+            flash(f'Anotación creada con éxito para {funcionario.nombre_completo}.', 'success')
+            return redirect(url_for('panel_jefe'))
+
+        # Si es GET, cargamos los datos para los menús desplegables
+        factores = Factor.query.order_by(Factor.id).all()
+        subfactores = SubFactor.query.order_by(SubFactor.id).all()
+
+        return render_template('crear_anotacion.html', 
+                               funcionario=funcionario, 
+                               factores=factores, 
+                               subfactores=subfactores)
+    
+    @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
+    @login_required
+    def ver_anotacion(folio):
+        # Buscamos la anotación por su folio
+        anotacion = Anotacion.query.get_or_404(folio)
+
+        # Medida de seguridad: nos aseguramos de que el usuario logueado
+        # solo pueda ver sus propias anotaciones.
+        if anotacion.funcionario_id != current_user.id:
+            abort(403) # Error de Acceso Prohibido
+
+        if request.method == 'POST':
+            # Verificamos que el checkbox 'tomo_conocimiento' haya sido marcado
+            if 'tomo_conocimiento' in request.form:
+                # Actualizamos el estado de la anotación
+                anotacion.estado = 'Leída'
+                anotacion.fecha_aceptacion = datetime.now() # Guardamos fecha y hora
+                
+                # Guardamos las observaciones del funcionario (si las hay)
+                observaciones = request.form.get('observacion_funcionario')
+                anotacion.observacion_funcionario = observaciones if observaciones else "Sin observaciones."
+
+                # Guardamos los cambios en la base de datos
+                db.session.commit()
+
+                flash('Has confirmado la lectura de la anotación.', 'success')
+                return redirect(url_for('mi_hoja_de_vida'))
+            else:
+                flash('Debes marcar la casilla "Tomo conocimiento" para confirmar.', 'warning')
+        
+        # Si es GET, simplemente mostramos la página con los detalles
+        return render_template('ver_anotacion.html', anotacion=anotacion)
     
     return app
 

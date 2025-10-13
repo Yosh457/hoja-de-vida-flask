@@ -32,7 +32,7 @@
                     <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center">
                         <a href="#" class="btn btn-secondary">Ver Hoja de Vida</a>
-                        <a href="#" class="btn btn-primary">Crear Anotación</a>
+                        <a href="{{ url_for('crear_anotacion', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Anotación</a>
                     </td>
                 </tr>
                 {% else %}

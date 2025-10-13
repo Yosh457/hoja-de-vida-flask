@@ -55,3 +55,10 @@ body {
     background-color: #bb2d3b;
     border-color: #b02a37;
 }
+
+.btn:disabled {
+    background-color: #6c757d; /* Un color gris */
+    border-color: #6c757d;
+    opacity: 0.65; /* Le bajamos la opacidad */
+    cursor: not-allowed; /* Cambiamos el cursor para indicar que no se puede hacer clic */
+}
