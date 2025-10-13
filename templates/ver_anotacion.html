@@ -27,33 +27,58 @@
 
         {% if anotacion.estado == 'Pendiente' %}
         <div class="border-t pt-6">
-            <div class="flex items-center mb-4">
-                <input type="checkbox" id="tomo_conocimiento" name="tomo_conocimiento" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                <label for="tomo_conocimiento" class="ml-2 block text-sm font-medium text-gray-900">Tomo conocimiento de esta anotación</label>
-            </div>
-            
-            <div id="observaciones-container" class="hidden">
-                <label for="observacion_funcionario" class="block text-sm font-medium text-gray-700">Mis Observaciones (Opcional)</label>
-                <textarea name="observacion_funcionario" rows="4" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
-            </div>
+            {% if anotacion.estado == 'Pendiente' and current_user.id == anotacion.funcionario_id %}
+                <form method="post" id="form-anotacion">
+                    <div class="flex items-center mb-4">
+                        <input type="checkbox" id="tomo_conocimiento" name="tomo_conocimiento" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <label for="tomo_conocimiento" class="ml-2 block text-sm font-medium text-gray-900">Tomo conocimiento de esta anotación</label>
+                    </div>
+                    
+                    <div id="observaciones-container" class="hidden">
+                        <label for="observacion_funcionario" class="block text-sm font-medium text-gray-700">Mis Observaciones (Opcional)</label>
+                        <textarea name="observacion_funcionario" rows="4" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
+                    </div>
 
-            <div class="flex justify-end gap-4 pt-6 mt-4">
-                <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Volver</a>
-                <button type="submit" id="submit-btn" class="btn btn-primary" disabled>Confirmar Lectura</button>
-            </div>
+                    <div class="flex justify-end gap-4 pt-6 mt-4">
+                        <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Volver</a>
+                        <button type="submit" id="submit-btn" class="btn btn-primary" disabled>Confirmar Lectura</button>
+                    </div>
+                </form>
+            {% else %}
+                <div>
+                    <p><strong>Observaciones del Funcionario:</strong></p>
+                    <div class="bg-gray-50 p-4 rounded-lg mt-2 border">
+                        <p class="text-gray-700">{{ anotacion.observacion_funcionario or 'Aún no hay respuesta.' }}</p>
+                    </div>
+                </div>
+                {% if anotacion.fecha_aceptacion %}
+                    <p class="text-sm text-gray-500 mt-4">Confirmada el: {{ anotacion.fecha_aceptacion.strftime('%d-%m-%Y a las %H:%M:%S') }}</p>
+                {% endif %}
+                <div class="flex justify-end pt-6 mt-4">
+                    {% if current_user.id == anotacion.funcionario_id %}
+                        <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Volver</a>
+                    {% else %}
+                        <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=anotacion.funcionario_id) }}" class="btn btn-secondary">Volver</a>
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
         {% else %}
         <div class="border-t pt-6">
-             <div>
+            <div>
                 <p><strong>Tus Observaciones:</strong></p>
                 <div class="bg-gray-50 p-4 rounded-lg mt-2 border">
                     <p class="text-gray-700">{{ anotacion.observacion_funcionario }}</p>
                 </div>
             </div>
-             <p class="text-sm text-gray-500 mt-4">Confirmada el: {{ anotacion.fecha_aceptacion.strftime('%d-%m-%Y a las %H:%M:%S') }}</p>
-             <div class="flex justify-end pt-6 mt-4">
-                 <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Volver</a>
-             </div>
+            <p class="text-sm text-gray-500 mt-4">Confirmada el: {{ anotacion.fecha_aceptacion.strftime('%d-%m-%Y a las %H:%M:%S') }}</p>
+            <div class="flex justify-end pt-6 mt-4">
+                {% if current_user.id == anotacion.funcionario_id %}
+                    <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Volver</a>
+                {% else %}
+                    <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=anotacion.funcionario_id) }}" class="btn btn-secondary">Volver</a>
+                {% endif %}
+            </div>
         </div>
         {% endif %}
     </form>

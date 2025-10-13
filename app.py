@@ -327,16 +327,39 @@ def create_app():
                                factores=factores, 
                                subfactores=subfactores)
     
+    @app.route('/jefe/hoja_de_vida/<int:funcionario_id>')
+    @login_required
+    @jefe_required
+    def ver_hoja_de_vida_funcionario(funcionario_id):
+        funcionario = Usuario.query.get_or_404(funcionario_id)
+
+        # Seguridad: Un jefe solo puede ver a sus subordinados directos (Admin puede ver a todos).
+        if funcionario.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
+            abort(403)
+
+        # Buscamos todas las anotaciones del funcionario, ordenadas por fecha.
+        anotaciones = Anotacion.query.filter_by(funcionario_id=funcionario.id).order_by(Anotacion.fecha_creacion.desc()).all()
+
+        return render_template('hoja_de_vida_funcionario.html', 
+                               funcionario=funcionario, 
+                               anotaciones=anotaciones)
+    
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
     def ver_anotacion(folio):
         # Buscamos la anotación por su folio
         anotacion = Anotacion.query.get_or_404(folio)
 
-        # Medida de seguridad: nos aseguramos de que el usuario logueado
-        # solo pueda ver sus propias anotaciones.
-        if anotacion.funcionario_id != current_user.id:
-            abort(403) # Error de Acceso Prohibido
+        # --- Medida de seguridad mejorada ---
+        # Verificamos si el usuario actual es el funcionario de la anotación,
+        # su jefe directo, o un administrador.
+        funcionario_de_anotacion = anotacion.funcionario
+        es_el_funcionario = (current_user.id == funcionario_de_anotacion.id)
+        es_el_jefe_directo = (current_user.id == funcionario_de_anotacion.jefe_directo_id)
+        es_admin = (current_user.rol.nombre == 'Admin')
+
+        if not (es_el_funcionario or es_el_jefe_directo or es_admin):
+            abort(403) # Si no cumple ninguna condición, prohibimos el acceso.
 
         if request.method == 'POST':
             # Verificamos que el checkbox 'tomo_conocimiento' haya sido marcado
