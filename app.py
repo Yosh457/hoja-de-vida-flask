@@ -396,6 +396,19 @@ def load_user(user_id):
 # Creamos la aplicación para poder ejecutarla
 app = create_app()
 
+# --- INICIO: Decorador para evitar caché ---
+@app.after_request
+def add_header(response):
+    """
+    Añade cabeceras para evitar que el navegador guarde en caché las páginas.
+    Esto soluciona el problema de los mensajes flash que reaparecen al usar el botón "atrás".
+    """
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+# --- FIN: Decorador para evitar caché ---
+
 # Punto de entrada para ejecutar la aplicación
 if __name__ == '__main__':
     # El modo debug se recarga automáticamente cuando guardas cambios
