@@ -25,6 +25,17 @@
                     <label for="password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
                     <input type="password" name="password" placeholder="Dejar en blanco para no cambiar" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
                 </div>
+                <div>
+                    <label for="jefe_directo_id" class="block text-sm font-medium text-gray-700">Jefe Directo (Opcional)</label>
+                    <select name="jefe_directo_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="" {% if not usuario.jefe_directo_id %}selected{% endif %}>Sin jefe directo</option>
+                        {% for jefe in jefes %}
+                            <option value="{{ jefe.id }}" {% if jefe.id == usuario.jefe_directo_id %}selected{% endif %}>
+                                {{ jefe.nombre_completo }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="space-y-6">
                 <div>

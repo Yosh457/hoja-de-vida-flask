@@ -25,6 +25,16 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# --- DECORADOR DE ROL JEFE ---
+def jefe_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Permitimos el acceso si el usuario es Admin O Jefe.
+        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefe']):
+            abort(403) # Error 403: Forbidden
+        return f(*args, **kwargs)
+    return decorated_function
+
 def create_app():
     """Crea y configura la aplicación Flask."""
     # Inicializamos la aplicación Flask
@@ -74,6 +84,8 @@ def create_app():
         if current_user.is_authenticated:
             if current_user.rol.nombre == 'Admin':
                 return redirect(url_for('admin_panel'))
+            elif current_user.rol.nombre == 'Jefe':
+                return redirect(url_for('panel_jefe'))
             else:
                 return redirect(url_for('mi_hoja_de_vida'))
 
@@ -101,9 +113,9 @@ def create_app():
             # --- LÓGICA DE REDIRECCIÓN POR ROL ---
             if usuario.rol.nombre == 'Admin':
                 return redirect(url_for('admin_panel'))
-            # elif usuario.rol.nombre == 'Jefe':
-                # return redirect(url_for('panel_jefe')) # Próximamente
-            else: # Para Jefes (temporalmente) y Funcionarios
+            elif usuario.rol.nombre == 'Jefe':
+                return redirect(url_for('panel_jefe'))
+            else:
                 return redirect(url_for('mi_hoja_de_vida'))
 
         # Si el método es GET, simplemente mostramos la página de login
@@ -140,6 +152,7 @@ def create_app():
             establecimiento_id = request.form.get('establecimiento_id')
             calidad_id = request.form.get('calidad_id')
             categoria_id = request.form.get('categoria_id')
+            jefe_id = request.form.get('jefe_directo_id')
 
             # 2. Verificamos si el email o RUT ya existen
             if Usuario.query.filter_by(email=email).first():
@@ -158,7 +171,8 @@ def create_app():
                 unidad_id=unidad_id,
                 establecimiento_id=establecimiento_id,
                 calidad_juridica_id=calidad_id,
-                categoria_id=categoria_id
+                categoria_id=categoria_id,
+                jefe_directo_id=jefe_id if jefe_id else None, # Permitir nulo
             )
             # Hasheamos la contraseña
             nuevo_usuario.set_password(password)
@@ -176,11 +190,13 @@ def create_app():
         establecimientos = Establecimiento.query.order_by(Establecimiento.nombre).all()
         calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
         categorias = Categoria.query.order_by(Categoria.nombre).all()
+        jefes = Usuario.query.filter(Usuario.rol.has(nombre='Jefe')).all()
 
         return render_template('crear_usuario.html', 
                                roles=roles, 
                                unidades=unidades, 
                                establecimientos=establecimientos, 
+                               jefes=jefes,
                                calidades=calidades, 
                                categorias=categorias)
     @app.route('/admin/editar_usuario/<int:id>', methods=['GET', 'POST'])
@@ -200,6 +216,8 @@ def create_app():
             usuario_a_editar.establecimiento_id = request.form.get('establecimiento_id')
             usuario_a_editar.calidad_juridica_id = request.form.get('calidad_id')
             usuario_a_editar.categoria_id = request.form.get('categoria_id')
+            jefe_id = request.form.get('jefe_directo_id')
+            usuario_a_editar.jefe_directo_id = jefe_id if jefe_id else None
 
             # Opcional: Actualizar la contraseña solo si se proporciona una nueva
             password = request.form.get('password')
@@ -217,6 +235,7 @@ def create_app():
         establecimientos = Establecimiento.query.order_by(Establecimiento.nombre).all()
         calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
         categorias = Categoria.query.order_by(Categoria.nombre).all()
+        jefes = Usuario.query.filter(Usuario.rol.has(nombre='Jefe')).all()
 
         return render_template('editar_usuario.html', 
                                usuario=usuario_a_editar,
@@ -224,7 +243,8 @@ def create_app():
                                unidades=unidades, 
                                establecimientos=establecimientos, 
                                calidades=calidades, 
-                               categorias=categorias)
+                               categorias=categorias,
+                               jefes=jefes)
     
     @app.route('/admin/toggle_activo/<int:id>', methods=['POST'])
     @login_required
@@ -247,13 +267,24 @@ def create_app():
             
         return redirect(url_for('admin_panel'))
     
-     # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---
+    # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---
     @app.route('/hoja_de_vida')
     @login_required
     def mi_hoja_de_vida():
         # En el futuro, aquí consultaremos las anotaciones del usuario
         # anotaciones = Anotacion.query.filter_by(funcionario_id=current_user.id).all()
         return render_template('mi_hoja_de_vida.html')
+    
+    # --- RUTAS DEL PANEL DE JEFE ---
+    @app.route('/jefe/panel')
+    @login_required
+    @jefe_required # Aplicamos nuestro nuevo decorador
+    def panel_jefe():
+        # Buscamos a todos los usuarios cuyo jefe_directo_id sea el id del usuario actual.
+        # Esto nos da la lista de subordinados.
+        subordinados = Usuario.query.filter_by(jefe_directo_id=current_user.id).order_by(Usuario.nombre_completo).all()
+        
+        return render_template('panel_jefe.html', subordinados=subordinados)
     
     return app
 

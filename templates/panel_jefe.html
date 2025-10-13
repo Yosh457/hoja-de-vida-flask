@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Panel de Jefe{% endblock %}
+{% block content %}
+<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl mx-auto my-12">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Panel de Jefatura</h2>
+            <p class="text-gray-500">Bienvenido, {{ current_user.nombre_completo }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Ver Mi Hoja de Vida</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
+        </div>
+    </div>
+
+    <div>
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Funcionarios a mi cargo</h3>
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="text-left py-3 px-4 font-semibold text-sm">Nombre Completo</th>
+                    <th class="text-left py-3 px-4 font-semibold text-sm">RUT</th>
+                    <th class="text-left py-3 px-4 font-semibold text-sm">Unidad</th>
+                    <th class="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for funcionario in subordinados %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4">{{ funcionario.nombre_completo }}</td>
+                    <td class="py-3 px-4">{{ funcionario.rut }}</td>
+                    <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
+                    <td class="py-3 px-4 text-center">
+                        <a href="#" class="btn btn-secondary">Ver Hoja de Vida</a>
+                        <a href="#" class="btn btn-primary">Crear Anotación</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-gray-500">No tienes funcionarios a tu cargo.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

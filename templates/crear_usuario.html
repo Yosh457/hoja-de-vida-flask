@@ -25,6 +25,15 @@
                     <label for="password" class="block text-sm font-medium text-gray-700">Contraseña Provisional</label>
                     <input type="password" name="password" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
                 </div>
+                <div>
+                    <label for="jefe_directo_id" class="block text-sm font-medium text-gray-700">Jefe Directo (Opcional)</label>
+                    <select name="jefe_directo_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Sin jefe directo</option>
+                        {% for jefe in jefes %}
+                            <option value="{{ jefe.id }}">{{ jefe.nombre_completo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="space-y-6">
                 <div>
