@@ -151,16 +151,60 @@ def create_app():
     @check_password_change
     @admin_required # ¡Aplicamos nuestro decorador personalizado!
     def admin_panel():
-        # Obtenemos el número de página de los argumentos de la URL (ej: /admin/panel?page=2)
         page = request.args.get('page', 1, type=int)
+        
+        # --- INICIO: Lógica de Filtros Mejorada ---
+        busqueda = request.args.get('busqueda', '')
+        rol_filtro = request.args.get('rol_filtro', '')
+        # ¡NUEVO! Leemos el filtro de unidad
+        unidad_filtro = request.args.get('unidad_filtro', '')
+        estado_filtro = request.args.get('estado_filtro', '')
 
-        # Usamos .paginate() en lugar de .all()
-        # Muestra 10 usuarios por página
-        pagination = Usuario.query.order_by(Usuario.id).paginate(
+        # Empezamos con la consulta base de todos los usuarios
+        query = Usuario.query
+
+        # Aplicamos los filtros dinámicamente
+        if busqueda:
+            from sqlalchemy import or_
+            query = query.filter(
+                or_(
+                    Usuario.nombre_completo.ilike(f'%{busqueda}%'),
+                    Usuario.email.ilike(f'%{busqueda}%')
+                )
+            )
+        
+        if rol_filtro:
+            query = query.filter(Usuario.rol_id == rol_filtro)
+
+        # ¡NUEVO! Aplicamos el filtro de unidad si existe
+        if unidad_filtro:
+            query = query.filter(Usuario.unidad_id == unidad_filtro)
+
+        if estado_filtro:
+            if estado_filtro == 'activo':
+                query = query.filter(Usuario.activo == True)
+            elif estado_filtro == 'inactivo':
+                query = query.filter(Usuario.activo == False)
+        
+        # Obtenemos las listas para poblar los menús desplegables de los filtros
+        roles_para_filtro = Rol.query.order_by(Rol.nombre).all()
+        # ¡NUEVO! Obtenemos las unidades
+        unidades_para_filtro = Unidad.query.order_by(Unidad.nombre).all()
+        # --- FIN: Lógica de Filtros ---
+
+        pagination = query.order_by(Usuario.id).paginate(
             page=page, per_page=10, error_out=False
         )
-
-        return render_template('admin_panel.html', pagination=pagination)
+        
+        # Pasamos todas las variables de filtro a la plantilla
+        return render_template('admin_panel.html', 
+                            pagination=pagination,
+                            roles_para_filtro=roles_para_filtro,
+                            unidades_para_filtro=unidades_para_filtro, # ¡NUEVO!
+                            busqueda=busqueda,
+                            rol_filtro=rol_filtro,
+                            unidad_filtro=unidad_filtro, # ¡NUEVO!
+                            estado_filtro=estado_filtro)
     
     @app.route('/admin/crear_usuario', methods=['GET', 'POST'])
     @login_required

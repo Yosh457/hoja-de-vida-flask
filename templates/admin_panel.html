@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Panel de Administración{% endblock %}
-
 {% from '_macros.html' import render_pagination %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl mx-auto my-12">
+<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-7xl mx-auto my-12">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
             <h2 class="text-2xl font-bold text-gray-800">Gestión de Usuarios</h2>
@@ -16,6 +15,42 @@
         </div>
     </div>
 
+    <form method="get" action="{{ url_for('admin_panel') }}" class="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+        <div class="md:col-span-2">
+            <label for="busqueda" class="block text-sm font-medium text-gray-700">Buscar por Nombre o Email:</label>
+            <input type="text" name="busqueda" id="busqueda" value="{{ busqueda or '' }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+        </div>
+        <div>
+            <label for="rol_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Rol:</label>
+            <select name="rol_filtro" id="rol_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">Todos los roles</option>
+                {% for rol in roles_para_filtro %}
+                    <option value="{{ rol.id }}" {% if rol.id == rol_filtro|int %}selected{% endif %}>{{ rol.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="unidad_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Unidad:</label>
+            <select name="unidad_filtro" id="unidad_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">Todas las unidades</option>
+                {% for unidad in unidades_para_filtro %}
+                    <option value="{{ unidad.id }}" {% if unidad.id == unidad_filtro|int %}selected{% endif %}>{{ unidad.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="estado_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Estado:</label>
+            <select name="estado_filtro" id="estado_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">Ambos</option>
+                <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activo</option>
+                <option value="inactivo" {% if estado_filtro == 'inactivo' %}selected{% endif %}>Inactivo</option>
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('admin_panel') }}" class="w-full btn btn-secondary">Limpiar</a>
+            <button type="submit" class="w-full btn btn-primary">Buscar</button>
+        </div>
+    </form>
     <table class="min-w-full bg-white">
         <thead class="bg-gray-100">
             <tr>
@@ -45,7 +80,6 @@
                 </td>
                 <td class="py-3 px-4 text-center flex justify-center gap-2">
                     <a href="{{ url_for('editar_usuario', id=usuario.id) }}" class="btn btn-secondary">Editar</a>
-                    
                     <form action="{{ url_for('toggle_activo', id=usuario.id) }}" method="POST">
                         {% if usuario.activo %}
                             <button type="submit" class="btn btn-warning">Desactivar</button>
@@ -57,7 +91,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="text-center py-4 text-gray-500">No hay usuarios registrados.</td>
+                <td colspan="7" class="text-center py-4 text-gray-500">No se encontraron usuarios que coincidan con los filtros.</td>
             </tr>
             {% endfor %}
         </tbody>
