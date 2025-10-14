@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Panel de Jefe{% endblock %}
+{% from '_macros.html' import render_pagination %}
+
 {% block content %}
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl mx-auto my-12">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
@@ -30,7 +32,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for funcionario in subordinados %}
+                {% for funcionario in pagination.items %}
                 <tr class="border-b hover:bg-gray-50">
                     <td class="py-3 px-4">{{ funcionario.nombre_completo }}</td>
                     <td class="py-3 px-4">{{ funcionario.rut }}</td>
@@ -42,11 +44,12 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-gray-500">No tienes funcionarios a tu cargo.</td>
+                    <td colspan="4" class="text-center py-4 text-gray-500">No tienes funcionarios a tu cargo o no se encontraron resultados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {{ render_pagination(pagination, 'panel_jefe') }}
     </div>
 </div>
 {% endblock %}

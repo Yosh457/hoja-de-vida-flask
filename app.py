@@ -54,6 +54,8 @@ def create_app():
     """Crea y configura la aplicación Flask."""
     # Inicializamos la aplicación Flask
     app = Flask(__name__)
+    # Habilitamos la extensión 'do' en el entorno de Jinja2.
+    app.jinja_env.add_extension('jinja2.ext.do')
     # Cargar las variables de entorno desde el archivo .env
     load_dotenv()
 
@@ -149,9 +151,16 @@ def create_app():
     @check_password_change
     @admin_required # ¡Aplicamos nuestro decorador personalizado!
     def admin_panel():
-        # Obtenemos todos los usuarios y los ordenamos por ID
-        usuarios = Usuario.query.order_by(Usuario.id).all()
-        return render_template('admin_panel.html', usuarios=usuarios)
+        # Obtenemos el número de página de los argumentos de la URL (ej: /admin/panel?page=2)
+        page = request.args.get('page', 1, type=int)
+
+        # Usamos .paginate() en lugar de .all()
+        # Muestra 10 usuarios por página
+        pagination = Usuario.query.order_by(Usuario.id).paginate(
+            page=page, per_page=10, error_out=False
+        )
+
+        return render_template('admin_panel.html', pagination=pagination)
     
     @app.route('/admin/crear_usuario', methods=['GET', 'POST'])
     @login_required
@@ -294,10 +303,11 @@ def create_app():
     @login_required
     @check_password_change
     def mi_hoja_de_vida():
-        # Buscamos todas las anotaciones del usuario logueado, ordenadas por fecha de creación descendente.
-        anotaciones = Anotacion.query.filter_by(funcionario_id=current_user.id).order_by(Anotacion.fecha_creacion.desc()).all()
-        
-        return render_template('mi_hoja_de_vida.html', anotaciones=anotaciones)
+        page = request.args.get('page', 1, type=int)
+        pagination = Anotacion.query.filter_by(funcionario_id=current_user.id).order_by(Anotacion.fecha_creacion.desc()).paginate(
+            page=page, per_page=5, error_out=False
+        )
+        return render_template('mi_hoja_de_vida.html', pagination=pagination)
     
     # --- RUTAS DEL PANEL DE JEFE ---
     @app.route('/jefe/panel')
@@ -305,6 +315,7 @@ def create_app():
     @login_required
     @jefe_required # Aplicamos nuestro nuevo decorador
     def panel_jefe():
+        page = request.args.get('page', 1, type=int)
         # Obtenemos el término de búsqueda del formulario
         busqueda = request.args.get('busqueda', '')
 
@@ -318,11 +329,10 @@ def create_app():
                     Usuario.rut.ilike(f'%{busqueda}%')
                 )
             )
-        # Buscamos a todos los usuarios cuyo jefe_directo_id sea el id del usuario actual.
-        # Esto nos da la lista de subordinados.
-        subordinados = query.order_by(Usuario.nombre_completo).all()
-        
-        return render_template('panel_jefe.html', subordinados=subordinados, busqueda=busqueda)
+        pagination = query.order_by(Usuario.nombre_completo).paginate(
+            page=page, per_page=10, error_out=False
+        )
+        return render_template('panel_jefe.html', pagination=pagination, busqueda=busqueda)
     
     @app.route('/jefe/crear_anotacion/<int:funcionario_id>', methods=['GET', 'POST'])
     @login_required
@@ -367,18 +377,16 @@ def create_app():
     @login_required
     @jefe_required
     def ver_hoja_de_vida_funcionario(funcionario_id):
+        page = request.args.get('page', 1, type=int)
         funcionario = Usuario.query.get_or_404(funcionario_id)
-
-        # Seguridad: Un jefe solo puede ver a sus subordinados directos (Admin puede ver a todos).
         if funcionario.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
             abort(403)
-
-        # Buscamos todas las anotaciones del funcionario, ordenadas por fecha.
-        anotaciones = Anotacion.query.filter_by(funcionario_id=funcionario.id).order_by(Anotacion.fecha_creacion.desc()).all()
-
+        pagination = Anotacion.query.filter_by(funcionario_id=funcionario.id).order_by(Anotacion.fecha_creacion.desc()).paginate(
+            page=page, per_page=5, error_out=False
+        )
         return render_template('hoja_de_vida_funcionario.html', 
                                funcionario=funcionario, 
-                               anotaciones=anotaciones)
+                               pagination=pagination)
     
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
