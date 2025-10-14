@@ -72,6 +72,8 @@ class Usuario(db.Model, UserMixin):
     activo = db.Column(db.Boolean, default=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     cambio_clave_requerido = db.Column(db.Boolean, default=False, nullable=False)
+    reset_token = db.Column(db.String(32), nullable=True)
+    reset_token_expiracion = db.Column(db.DateTime, nullable=True)
 
     # --- Llaves Foráneas y Relaciones ---
     rol_id = db.Column(db.Integer, db.ForeignKey('Roles.id'))

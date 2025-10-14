@@ -3,10 +3,14 @@
 import os
 from dotenv import load_dotenv
 from flask import Flask
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 # Importamos las extensiones y los modelos que usaremos
 from flask_login import LoginManager
 from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
@@ -434,7 +438,86 @@ def create_app():
 
         return render_template('cambiar_clave.html')
     
+    @app.route('/solicitar-reseteo', methods=['GET', 'POST'])
+    def solicitar_reseteo():
+        if request.method == 'POST':
+            email = request.form.get('email')
+            usuario = Usuario.query.filter_by(email=email).first()
+
+            if usuario:
+                token = secrets.token_hex(16)
+                expiracion = datetime.utcnow() + timedelta(hours=1)
+
+                # Guardar token y expiración en el objeto usuario
+                usuario.reset_token = token
+                usuario.reset_token_expiracion = expiracion
+                db.session.commit()
+
+                # Enviar correo
+                enviar_correo_reseteo(usuario, token)
+
+            # Por seguridad, mostramos el mismo mensaje exista o no el correo
+            flash('Si tu correo está en nuestro sistema, recibirás un enlace para restablecer tu contraseña.', 'info')
+            return redirect(url_for('login'))
+
+        return render_template('solicitar_reseteo.html')
+    
+    @app.route('/resetear-clave/<token>', methods=['GET', 'POST'])
+    def resetear_clave(token):
+        # Buscamos al usuario por el token y verificamos que no haya expirado
+        usuario = Usuario.query.filter_by(reset_token=token).first()
+
+        if not usuario or usuario.reset_token_expiracion < datetime.utcnow():
+            flash('El enlace de reseteo es inválido o ha expirado.', 'danger')
+            return redirect(url_for('solicitar_reseteo'))
+
+        if request.method == 'POST':
+            nueva_password = request.form.get('nueva_password')
+            usuario.set_password(nueva_password)
+
+            # Invalidamos el token para que no se pueda reusar
+            usuario.reset_token = None
+            usuario.reset_token_expiracion = None
+            db.session.commit()
+
+            flash('Tu contraseña ha sido actualizada. Ya puedes iniciar sesión.', 'success')
+            return redirect(url_for('login'))
+
+        return render_template('resetear_clave.html')
+    
     return app
+
+def enviar_correo_reseteo(usuario, token):
+    remitente = os.getenv("EMAIL_USUARIO")
+    contrasena = os.getenv("EMAIL_CONTRASENA")
+
+    if not remitente or not contrasena:
+        print("ERROR: Asegúrate de que EMAIL_USUARIO y EMAIL_CONTRASENA están en tu archivo .env")
+        return
+
+    msg = MIMEMultipart()
+    msg['Subject'] = 'Restablecimiento de Contraseña - Sistema Hoja de Vida'
+    msg['From'] = f"Sistema Hoja de Vida <{remitente}>"
+    msg['To'] = usuario.email # Adaptado a nuestro objeto Usuario
+
+    url_reseteo = url_for('resetear_clave', token=token, _external=True)
+    cuerpo_html = f"""
+    <p>Hola {usuario.nombre_completo},</p>
+    <p>Hemos recibido una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+    <p><a href="{url_reseteo}" style="padding: 10px 15px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Restablecer mi contraseña</a></p>
+    <p>Si no solicitaste esto, puedes ignorar este correo.</p>
+    <p>El enlace expirará en 1 hora.</p>
+    """
+    msg.attach(MIMEText(cuerpo_html, 'html'))
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(remitente, contrasena)
+            server.send_message(msg)
+            print(f"Correo de reseteo enviado exitosamente a {usuario.email}")
+    except Exception as e:
+        print(f"Error al enviar correo de reseteo: {e}")
 
 # --- USER LOADER ---
 # Esta función es crucial. Flask-Login la usa para recargar el objeto de usuario 
