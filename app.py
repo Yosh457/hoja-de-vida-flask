@@ -36,6 +36,14 @@ def jefe_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def check_password_change(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated and current_user.cambio_clave_requerido:
+            return redirect(url_for('cambiar_clave'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def create_app():
     """Crea y configura la aplicación Flask."""
     # Inicializamos la aplicación Flask
@@ -132,6 +140,7 @@ def create_app():
     # --- RUTAS DEL PANEL DE ADMINISTRACIÓN ---
     @app.route('/admin/panel')
     @login_required
+    @check_password_change
     @admin_required # ¡Aplicamos nuestro decorador personalizado!
     def admin_panel():
         # Obtenemos todos los usuarios y los ordenamos por ID
@@ -154,6 +163,7 @@ def create_app():
             calidad_id = request.form.get('calidad_id')
             categoria_id = request.form.get('categoria_id')
             jefe_id = request.form.get('jefe_directo_id')
+            forzar_cambio = request.form.get('forzar_cambio_clave') == '1'
 
             # 2. Verificamos si el email o RUT ya existen
             if Usuario.query.filter_by(email=email).first():
@@ -177,6 +187,9 @@ def create_app():
             )
             # Hasheamos la contraseña
             nuevo_usuario.set_password(password)
+
+            # Al crear un nuevo usuario:
+            nuevo_usuario.cambio_clave_requerido = forzar_cambio
 
             # 4. Guardamos en la base de datos
             db.session.add(nuevo_usuario)
@@ -219,6 +232,8 @@ def create_app():
             usuario_a_editar.categoria_id = request.form.get('categoria_id')
             jefe_id = request.form.get('jefe_directo_id')
             usuario_a_editar.jefe_directo_id = jefe_id if jefe_id else None
+            forzar_cambio = request.form.get('forzar_cambio_clave') == '1'
+            usuario_a_editar.cambio_clave_requerido = forzar_cambio
 
             # Opcional: Actualizar la contraseña solo si se proporciona una nueva
             password = request.form.get('password')
@@ -271,6 +286,7 @@ def create_app():
     # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---
     @app.route('/hoja_de_vida')
     @login_required
+    @check_password_change
     def mi_hoja_de_vida():
         # Buscamos todas las anotaciones del usuario logueado, ordenadas por fecha de creación descendente.
         anotaciones = Anotacion.query.filter_by(funcionario_id=current_user.id).order_by(Anotacion.fecha_creacion.desc()).all()
@@ -279,14 +295,28 @@ def create_app():
     
     # --- RUTAS DEL PANEL DE JEFE ---
     @app.route('/jefe/panel')
+    @check_password_change
     @login_required
     @jefe_required # Aplicamos nuestro nuevo decorador
     def panel_jefe():
+        # Obtenemos el término de búsqueda del formulario
+        busqueda = request.args.get('busqueda', '')
+
+        # Empezamos con la consulta base: solo los subordinados del jefe actual
+        query = Usuario.query.filter_by(jefe_directo_id=current_user.id)
+        if busqueda:
+            from sqlalchemy import or_
+            query = query.filter(
+                or_(
+                    Usuario.nombre_completo.ilike(f'%{busqueda}%'),
+                    Usuario.rut.ilike(f'%{busqueda}%')
+                )
+            )
         # Buscamos a todos los usuarios cuyo jefe_directo_id sea el id del usuario actual.
         # Esto nos da la lista de subordinados.
-        subordinados = Usuario.query.filter_by(jefe_directo_id=current_user.id).order_by(Usuario.nombre_completo).all()
+        subordinados = query.order_by(Usuario.nombre_completo).all()
         
-        return render_template('panel_jefe.html', subordinados=subordinados)
+        return render_template('panel_jefe.html', subordinados=subordinados, busqueda=busqueda)
     
     @app.route('/jefe/crear_anotacion/<int:funcionario_id>', methods=['GET', 'POST'])
     @login_required
@@ -382,6 +412,27 @@ def create_app():
         
         # Si es GET, simplemente mostramos la página con los detalles
         return render_template('ver_anotacion.html', anotacion=anotacion)
+    
+    @app.route('/cambiar_clave', methods=['GET', 'POST'])
+    @login_required
+    def cambiar_clave():
+        # Si el usuario no necesita cambiar la clave, lo sacamos de aquí
+        if not current_user.cambio_clave_requerido:
+            return redirect(url_for('index')) # O a su panel correspondiente
+
+        if request.method == 'POST':
+            nueva_password = request.form.get('nueva_password')
+            # (Aquí podrías añadir validación de seguridad del lado del servidor también)
+
+            current_user.set_password(nueva_password)
+            current_user.cambio_clave_requerido = False # ¡Muy importante!
+            db.session.commit()
+
+            logout_user() # Lo deslogueamos para que inicie sesión con su nueva clave
+            flash('Contraseña actualizada exitosamente. Por favor, inicia sesión de nuevo.', 'success')
+            return redirect(url_for('login'))
+
+        return render_template('cambiar_clave.html')
     
     return app
 

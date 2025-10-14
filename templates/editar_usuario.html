@@ -6,7 +6,7 @@
         <h2 class="text-2xl font-bold text-gray-800">Editando a: <span class="text-blue-600">{{ usuario.nombre_completo }}</span></h2>
     </div>
 
-    <form method="post" class="space-y-8">
+    <form id="edit-user-form" method="post" class="space-y-8">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="space-y-6">
                 <div>
@@ -62,7 +62,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                 <div>
+                <div>
                     <label for="calidad_id" class="block text-sm font-medium text-gray-700">Calidad Jurídica</label>
                     <select name="calidad_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
                         {% for calidad in calidades %}
@@ -70,7 +70,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                 <div>
+                <div>
                     <label for="categoria_id" class="block text-sm font-medium text-gray-700">Categoría</label>
                     <select name="categoria_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
                         {% for cat in categorias %}
@@ -78,6 +78,13 @@
                         {% endfor %}
                     </select>
                 </div>
+                <fieldset>
+                    <legend class="text-lg font-medium text-gray-900">Opciones de Contraseña</legend>
+                    <div class="mt-4 flex items-center">
+                        <input type="checkbox" name="forzar_cambio_clave" value="1" id="forzar_cambio_clave" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <label for="forzar_cambio_clave" class="ml-3 block text-sm font-medium text-gray-700">Forzar cambio de contraseña en el primer inicio de sesión</label>
+                    </div>
+                </fieldset>
             </div>
         </div>
 
@@ -87,4 +94,18 @@
         </div>
     </form>
 </div>
+
+<div id="confirmation-modal" class="fixed inset-0 z-50 items-center justify-center hidden" style="background-color: rgba(0,0,0,0.6);">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 m-4 text-center">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Confirmar Cambios</h3>
+        <p class="text-sm text-gray-600 mb-6">¿Estás seguro de que deseas guardar los cambios realizados en este usuario?</p>
+        <div class="flex justify-center gap-4">
+            <button id="cancel-save" class="btn btn-secondary">Cancelar</button>
+            <button id="confirm-save" class="btn btn-primary">Sí, Guardar</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='modal_handler.js') }}"></script>
+
 {% endblock %}

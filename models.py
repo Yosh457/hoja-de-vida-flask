@@ -71,6 +71,7 @@ class Usuario(db.Model, UserMixin):
     password_hash = db.Column(db.String(255), nullable=False)
     activo = db.Column(db.Boolean, default=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    cambio_clave_requerido = db.Column(db.Boolean, default=False, nullable=False)
 
     # --- Llaves Foráneas y Relaciones ---
     rol_id = db.Column(db.Integer, db.ForeignKey('Roles.id'))
