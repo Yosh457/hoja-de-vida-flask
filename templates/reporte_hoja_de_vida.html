@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Hoja de Vida - {{ funcionario.nombre_completo }}</title>
+    <style>
+        /* Estilos básicos para el documento PDF */
+        @page {
+            size: letter;
+            margin: 1.5cm;
+        }
+        body { 
+            font-family: 'Helvetica', 'Arial', sans-serif; 
+            font-size: 11px; 
+            color: #333;
+        }
+        h1 { 
+            text-align: center; 
+            color: #2c3e50; 
+            border-bottom: 2px solid #34495e; 
+            padding-bottom: 10px; 
+            margin-bottom: 30px;
+        }
+        .info-funcionario { 
+            margin-bottom: 30px; 
+            line-height: 1.6; 
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .anotacion {
+            margin-top: 25px;
+            /* Evita que una tabla se divida entre dos páginas si es posible */
+            page-break-inside: avoid;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            border: 1px solid #ccc; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #e9ecef; 
+            font-weight: bold;
+            width: 30%; /* Ancho fijo para las etiquetas */
+        }
+        .favorable { color: #198754; font-weight: bold; }
+        .desfavorable { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Reporte de Hoja de Vida</h1>
+    
+    <div class="info-funcionario">
+        <p><strong>Funcionario:</strong> {{ funcionario.nombre_completo }}</p>
+        <p><strong>RUT:</strong> {{ funcionario.rut }}</p>
+        <p><strong>Unidad:</strong> {{ funcionario.unidad.nombre }}</p>
+        <p><strong>Fecha de Generación:</strong> {{ fecha_actual }}</p>
+    </div>
+
+    {% for anotacion in anotaciones %}
+        <div class="anotacion">
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2" style="background-color: #34495e; color: white;">Folio #{{ anotacion.folio }} - Fecha: {{ anotacion.fecha_creacion.strftime('%d/%m/%Y') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>Tipo de Anotación</th>
+                        <td class="{% if anotacion.tipo == 'Favorable' %}favorable{% else %}desfavorable{% endif %}">
+                            {{ anotacion.tipo }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Factor / Sub-Factor</th>
+                        <td>{{ anotacion.subfactor.factor.nombre }} / {{ anotacion.subfactor.nombre }}</td>
+                    </tr>
+                    <tr>
+                        <th>Creada por (Jefatura)</th>
+                        <td>{{ anotacion.jefe.nombre_completo }}</td>
+                    </tr>
+                    <tr>
+                        <th>Estado</th>
+                        <td>{{ anotacion.estado }}</td>
+                    </tr>
+                    <tr>
+                        <th>Motivo (Jefatura)</th>
+                        <td>{{ anotacion.motivo_jefe }}</td>
+                    </tr>
+                    <tr>
+                        <th>Observaciones (Funcionario)</th>
+                        <td>{{ anotacion.observacion_funcionario or 'Sin respuesta.' }}</td>
+                    </tr>
+                    {% if anotacion.fecha_aceptacion %}
+                    <tr>
+                        <th>Fecha Aceptación</th>
+                        <td>{{ anotacion.fecha_aceptacion.strftime('%d/%m/%Y a las %H:%M:%S') }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
+
+    {% if not anotaciones %}
+        <p>El funcionario no tiene anotaciones registradas a la fecha.</p>
+    {% endif %}
+</body>
+</html>

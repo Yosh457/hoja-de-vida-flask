@@ -16,6 +16,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from functools import wraps
 from flask import abort
+from flask import Response
+from weasyprint import HTML
 from flask_login import current_user
 # Inicializamos el gestor de logins
 login_manager = LoginManager()
@@ -484,6 +486,35 @@ def create_app():
             return redirect(url_for('login'))
 
         return render_template('resetear_clave.html')
+    
+    @app.route('/generar_pdf/<int:funcionario_id>')
+    @login_required
+    def generar_pdf(funcionario_id):
+        # Medida de seguridad: Solo el propio funcionario, su jefe, o un admin pueden generar el PDF.
+        funcionario = Usuario.query.get_or_404(funcionario_id)
+        es_el_funcionario = (current_user.id == funcionario.id)
+        es_el_jefe_directo = (current_user.id == funcionario.jefe_directo_id)
+        es_admin = (current_user.rol.nombre == 'Admin')
+
+        if not (es_el_funcionario or es_el_jefe_directo or es_admin):
+            abort(403)
+
+        anotaciones = Anotacion.query.filter_by(funcionario_id=funcionario.id).order_by(Anotacion.fecha_creacion.asc()).all()
+        fecha_actual = date.today().strftime('%d/%m/%Y')
+
+        # Renderizamos la plantilla HTML específica para el PDF con los datos
+        html_renderizado = render_template('reporte_hoja_de_vida.html', 
+                                        funcionario=funcionario, 
+                                        anotaciones=anotaciones,
+                                        fecha_actual=fecha_actual)
+
+        # Usamos WeasyPrint para convertir el HTML a PDF en memoria
+        pdf = HTML(string=html_renderizado).write_pdf()
+
+        # Creamos una respuesta HTTP que le dice al navegador que descargue el archivo
+        return Response(pdf,
+                        mimetype='application/pdf',
+                        headers={'Content-Disposition': f'attachment;filename=hoja_de_vida_{funcionario.rut}.pdf'})
     
     return app
 

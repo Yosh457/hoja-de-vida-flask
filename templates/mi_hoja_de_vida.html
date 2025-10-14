@@ -11,7 +11,7 @@
             {% if current_user.rol.nombre == 'Jefe' %}
                 <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
             {% endif %}
-            
+            <a href="{{ url_for('generar_pdf', funcionario_id=current_user.id) }}" class="btn btn-primary" target="_blank">Generar PDF</a>
             <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
