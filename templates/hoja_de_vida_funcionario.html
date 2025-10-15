@@ -15,9 +15,44 @@
         </div>
     </div>
 
+    <div class="mb-10">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Anotaciones Pendientes de Respuesta</h3>
+        {% if anotaciones_pendientes %}
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="text-left py-3 px-4 font-semibold text-sm">Folio</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm">Fecha</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm">Tipo</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm">Creada por</th>
+                        <th class="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for anotacion in anotaciones_pendientes %}
+                    <tr class="border-b bg-yellow-50 hover:bg-yellow-100">
+                        <td class="py-3 px-4">{{ anotacion.folio }}</td>
+                        <td class="py-3 px-4">{{ anotacion.fecha_creacion.strftime('%d-%m-%Y') }}</td>
+                        <td class="py-3 px-4">
+                            {% if anotacion.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ anotacion.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ anotacion.tipo }}</span>{% endif %}
+                        </td>
+                        <td class="py-3 px-4">{{ anotacion.jefe.nombre_completo }}</td>
+                        <td class="py-3 px-4 text-center">
+                            <a href="{{ url_for('ver_anotacion', folio=anotacion.folio) }}" class="btn btn-secondary">Ver Detalle</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="bg-gray-50 p-6 rounded-lg text-center">
+                <p class="text-gray-600">Este funcionario no tiene anotaciones pendientes de respuesta.</p>
+            </div>
+        {% endif %}
+    </div>
     <div>
         <h3 class="text-xl font-semibold text-gray-700 mb-4">Historial de Anotaciones</h3>
-        {% if pagination.items %}
+        {% if historial_pagination.items %}
             <table class="min-w-full bg-white">
                 <thead class="bg-gray-100">
                     <tr>
@@ -30,38 +65,30 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for anotacion in pagination.items %}
+                    {% for anotacion in historial_pagination.items %}
                     <tr class="border-b hover:bg-gray-50">
                         <td class="py-3 px-4">{{ anotacion.folio }}</td>
                         <td class="py-3 px-4">{{ anotacion.fecha_creacion.strftime('%d-%m-%Y') }}</td>
                         <td class="py-3 px-4">
-                            {% if anotacion.tipo == 'Favorable' %}
-                                <span class="text-green-600 font-semibold">{{ anotacion.tipo }}</span>
-                            {% else %}
-                                <span class="text-red-600 font-semibold">{{ anotacion.tipo }}</span>
-                            {% endif %}
+                            {% if anotacion.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ anotacion.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ anotacion.tipo }}</span>{% endif %}
                         </td>
                         <td class="py-3 px-4">{{ anotacion.jefe.nombre_completo }}</td>
                         <td class="py-3 px-4 text-center">
-                            {% if anotacion.estado == 'Pendiente' %}
-                                <span class="bg-yellow-200 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Pendiente</span>
-                            {% else %}
-                                <span class="bg-blue-200 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Leída</span>
-                            {% endif %}
+                            <span class="bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Aceptada</span>
                         </td>
                         <td class="py-3 px-4 text-center">
-                            <a href="{{ url_for('ver_anotacion', folio=anotacion.folio) }}" class="btn btn-primary">Ver Detalle</a>
+                            <a href="{{ url_for('ver_anotacion', folio=anotacion.folio) }}" class="btn btn-secondary">Ver Detalle</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            {{ render_pagination(pagination, 'ver_hoja_de_vida_funcionario', extra_args={'funcionario_id': funcionario.id}) }}
+            {{ render_pagination(historial_pagination, 'ver_hoja_de_vida_funcionario', extra_args={'funcionario_id': funcionario.id}) }}
         {% else %}
             <div class="bg-gray-50 p-6 rounded-lg text-center">
-                <p class="text-gray-600">Este funcionario aún no tiene anotaciones registradas.</p>
+                <p class="text-gray-600">Este funcionario no tiene un historial de anotaciones.</p>
             </div>
         {% endif %}
     </div>
-</div>
+    </div>
 {% endblock %}

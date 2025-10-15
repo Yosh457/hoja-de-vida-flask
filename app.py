@@ -348,10 +348,22 @@ def create_app():
     @check_password_change
     def mi_hoja_de_vida():
         page = request.args.get('page', 1, type=int)
-        pagination = Anotacion.query.filter_by(funcionario_id=current_user.id).order_by(Anotacion.fecha_creacion.desc()).paginate(
+
+        # Consulta 1: Obtener TODAS las anotaciones pendientes
+        anotaciones_pendientes = Anotacion.query.filter_by(
+            funcionario_id=current_user.id, estado='Pendiente'
+        ).order_by(Anotacion.folio.desc()).all()
+
+        # Consulta 2: Obtener el historial paginado de anotaciones ACEPTADAS
+        historial_pagination = Anotacion.query.filter_by(
+            funcionario_id=current_user.id, estado='Aceptada'
+        ).order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
-        return render_template('mi_hoja_de_vida.html', pagination=pagination)
+        
+        return render_template('mi_hoja_de_vida.html', 
+                            anotaciones_pendientes=anotaciones_pendientes,
+                            historial_pagination=historial_pagination)
     
     # --- RUTAS DEL PANEL DE JEFE ---
     @app.route('/jefe/panel')
@@ -405,6 +417,9 @@ def create_app():
             db.session.add(nueva_anotacion)
             db.session.commit()
 
+            # --- ¡NUEVO! Enviamos el correo de notificación ---
+            enviar_correo_notificacion_anotacion(nueva_anotacion)
+
             flash(f'Anotación creada con éxito para {funcionario.nombre_completo}.', 'success')
             return redirect(url_for('panel_jefe'))
 
@@ -425,12 +440,23 @@ def create_app():
         funcionario = Usuario.query.get_or_404(funcionario_id)
         if funcionario.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
             abort(403)
-        pagination = Anotacion.query.filter_by(funcionario_id=funcionario.id).order_by(Anotacion.fecha_creacion.desc()).paginate(
+
+        # Consulta 1: Obtener TODAS las anotaciones pendientes del funcionario
+        anotaciones_pendientes = Anotacion.query.filter_by(
+            funcionario_id=funcionario.id, estado='Pendiente'
+        ).order_by(Anotacion.folio.desc()).all()
+
+        # Consulta 2: Obtener el historial paginado de anotaciones ACEPTADAS
+        historial_pagination = Anotacion.query.filter_by(
+            funcionario_id=funcionario.id, estado='Aceptada'
+        ).order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
+        
         return render_template('hoja_de_vida_funcionario.html', 
-                               funcionario=funcionario, 
-                               pagination=pagination)
+                            funcionario=funcionario, 
+                            anotaciones_pendientes=anotaciones_pendientes,
+                            historial_pagination=historial_pagination)
     
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
@@ -601,6 +627,46 @@ def enviar_correo_reseteo(usuario, token):
             print(f"Correo de reseteo enviado exitosamente a {usuario.email}")
     except Exception as e:
         print(f"Error al enviar correo de reseteo: {e}")
+
+def enviar_correo_notificacion_anotacion(anotacion):
+    """Envía un correo al funcionario notificándole de una nueva anotación."""
+    remitente = os.getenv("EMAIL_USUARIO")
+    contrasena = os.getenv("EMAIL_CONTRASENA")
+    
+    if not remitente or not contrasena:
+        print("ERROR: Credenciales de correo no configuradas en .env")
+        return
+
+    # Obtenemos los datos del destinatario y del emisor desde el objeto anotacion
+    funcionario = anotacion.funcionario
+    jefe = anotacion.jefe
+
+    msg = MIMEMultipart()
+    msg['Subject'] = f"Nueva Anotación en tu Hoja de Vida - Folio #{anotacion.folio}"
+    msg['From'] = f"Sistema Hoja de Vida <{remitente}>"
+    msg['To'] = funcionario.email
+    
+    # URL a la página de login
+    url_sistema = url_for('login', _external=True)
+
+    cuerpo_html = f"""
+    <p>Hola {funcionario.nombre_completo},</p>
+    <p>Has recibido una nueva anotación de tipo <strong>{anotacion.tipo}</strong> en tu Hoja de Vida, creada por <strong>{jefe.nombre_completo}</strong>.</p>
+    <p>Para revisar los detalles, por favor ingresa al sistema:</p>
+    <p><a href="{url_sistema}" style="padding: 10px 15px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Ingresar al Sistema</a></p>
+    <p>Este es un correo generado automáticamente, por favor no respondas a esta dirección.</p>
+    """
+    msg.attach(MIMEText(cuerpo_html, 'html'))
+    
+    try:
+        # Usamos 'with' para asegurar que la conexión se cierre correctamente
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(remitente, contrasena)
+            server.send_message(msg)
+            print(f"Correo de notificación enviado exitosamente a {funcionario.email}")
+    except Exception as e:
+        print(f"Error al enviar correo de notificación: {e}")
 
 # --- USER LOADER ---
 # Esta función es crucial. Flask-Login la usa para recargar el objeto de usuario 
