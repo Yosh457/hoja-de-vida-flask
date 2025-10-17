@@ -371,7 +371,8 @@ def create_app():
             page=page, per_page=5, error_out=False
         )
 
-        factores_para_filtro = Factor.query.order_by(Factor.nombre).all()
+        # Convertimos los objetos Factor en una lista de diccionarios simples
+        factores_para_filtro = [{'id': f.id, 'nombre': f.nombre} for f in Factor.query.order_by(Factor.nombre).all()]
         # Convertimos los objetos SubFactor en una lista de diccionarios simples
         subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
 
@@ -478,7 +479,8 @@ def create_app():
             page=page, per_page=5, error_out=False
         )
 
-        factores_para_filtro = Factor.query.order_by(Factor.nombre).all()
+        # Convertimos los objetos Factor en una lista de diccionarios simples
+        factores_para_filtro = [{'id': f.id, 'nombre': f.nombre} for f in Factor.query.order_by(Factor.nombre).all()]
         # Convertimos los objetos SubFactor en una lista de diccionarios simples
         subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
 
@@ -611,19 +613,36 @@ def create_app():
         if not (es_el_funcionario or es_el_jefe_directo or es_admin):
             abort(403)
 
-        anotaciones = Anotacion.query.filter_by(funcionario_id=funcionario.id).order_by(Anotacion.fecha_creacion.asc()).all()
+        # --- INICIO: Lógica de Filtros para el PDF ---
+        tipo_filtro = request.args.get('tipo', '')
+        factor_filtro = request.args.get('factor', '')
+
+        # Empezamos con la consulta base de todas las anotaciones del funcionario
+        query = Anotacion.query.filter_by(funcionario_id=funcionario.id)
+
+        # Aplicamos los filtros si se proporcionaron
+        if tipo_filtro:
+            query = query.filter(Anotacion.tipo == tipo_filtro)
+        
+        if factor_filtro:
+            query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+        
+        # Obtenemos las anotaciones filtradas y ordenadas
+        anotaciones = query.order_by(Anotacion.fecha_creacion.asc()).all()
+        # --- FIN: Lógica de Filtros ---
+
         fecha_actual = date.today().strftime('%d/%m/%Y')
 
-        # Renderizamos la plantilla HTML específica para el PDF con los datos
+        # Renderizamos la plantilla HTML con los datos (ya filtrados)
         html_renderizado = render_template('reporte_hoja_de_vida.html', 
                                         funcionario=funcionario, 
                                         anotaciones=anotaciones,
                                         fecha_actual=fecha_actual)
 
-        # Usamos WeasyPrint para convertir el HTML a PDF en memoria
+        # Usamos WeasyPrint para convertir el HTML a PDF
         pdf = HTML(string=html_renderizado).write_pdf()
 
-        # Creamos una respuesta HTTP que le dice al navegador que descargue el archivo
+        # Devolvemos el PDF al navegador
         return Response(pdf,
                         mimetype='application/pdf',
                         headers={'Content-Disposition': f'attachment;filename=hoja_de_vida_{funcionario.rut}.pdf'})

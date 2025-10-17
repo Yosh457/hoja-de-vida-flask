@@ -10,7 +10,11 @@
             <p class="text-gray-500">{{ current_user.rol.nombre }} en {{ current_user.unidad.nombre }}</p>
         </div>
         <div class="flex items-center gap-4">
-            <a href="{{ url_for('generar_pdf', funcionario_id=current_user.id) }}" class="btn btn-primary" target="_blank">Generar Reporte PDF</a>
+            <button class="btn btn-primary open-report-modal"
+                    data-pdf-url="{{ url_for('generar_pdf', funcionario_id=current_user.id if 'mi_hoja_de_vida' in request.endpoint else funcionario.id) }}"
+                    data-factores='{{ factores_para_filtro|tojson|safe }}'>
+                Generar Reporte PDF
+            </button>
             {% if current_user.rol.nombre == 'Jefe' %}
                 <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
             {% endif %}
