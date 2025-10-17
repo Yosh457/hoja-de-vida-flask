@@ -10,7 +10,7 @@
             <p class="text-gray-500">{{ funcionario.rol.nombre }} en {{ funcionario.unidad.nombre }}</p>
         </div>
         <div>
-            <a href="{{ url_for('generar_pdf', funcionario_id=funcionario.id) }}" class="btn btn-primary" target="_blank">Generar PDF</a>
+            <a href="{{ url_for('generar_pdf', funcionario_id=funcionario.id) }}" class="btn btn-primary" target="_blank">Generar Reporte PDF</a>
             <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
         </div>
     </div>
@@ -52,6 +52,40 @@
     </div>
     <div>
         <h3 class="text-xl font-semibold text-gray-700 mb-4">Historial de Anotaciones</h3>
+        <div id="filter-data" 
+            data-subfactores='{{ subfactores_para_filtro|tojson }}' 
+            data-selected-subfactor="{{ subfactor_filtro }}">
+        </div>
+
+        <form method="get" class="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+            <div>
+                <label for="tipo_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Tipo:</label>
+                <select name="tipo_filtro" id="tipo_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="">Ambos</option>
+                    <option value="Favorable" {% if tipo_filtro == 'Favorable' %}selected{% endif %}>Favorable</option>
+                    <option value="Desfavorable" {% if tipo_filtro == 'Desfavorable' %}selected{% endif %}>Desfavorable</option>
+                </select>
+            </div>
+            <div>
+                <label for="factor_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Factor:</label>
+                <select name="factor_filtro" id="factor_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="">Todos</option>
+                    {% for factor in factores_para_filtro %}
+                        <option value="{{ factor.id }}" {% if factor.id == factor_filtro|int %}selected{% endif %}>{{ factor.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="subfactor_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Sub-Factor:</label>
+                <select name="subfactor_filtro" id="subfactor_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" disabled>
+                    <option value="">Selecciona un factor primero...</option>
+                </select>
+            </div>
+            <div class="md:col-span-3 flex gap-2">
+                <a href="{{ request.path }}" class="w-full btn btn-secondary">Limpiar</a>
+                <button type="submit" class="w-full btn btn-primary">Buscar</button>
+            </div>
+        </form>
         {% if historial_pagination.items %}
             <table class="min-w-full bg-white">
                 <thead class="bg-gray-100">
@@ -59,6 +93,8 @@
                         <th class="text-left py-3 px-4 font-semibold text-sm">Folio</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm">Fecha</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm">Tipo</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm">Factor</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm">Sub-Factor</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm">Creada por</th>
                         <th class="text-center py-3 px-4 font-semibold text-sm">Estado</th>
                         <th class="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
@@ -72,6 +108,8 @@
                         <td class="py-3 px-4">
                             {% if anotacion.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ anotacion.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ anotacion.tipo }}</span>{% endif %}
                         </td>
+                        <td class="py-3 px-4">{{ anotacion.subfactor.factor.nombre }}</td>
+                        <td class="py-3 px-4">{{ anotacion.subfactor.nombre }}</td>
                         <td class="py-3 px-4">{{ anotacion.jefe.nombre_completo }}</td>
                         <td class="py-3 px-4 text-center">
                             <span class="bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Aceptada</span>
@@ -90,5 +128,6 @@
             </div>
         {% endif %}
     </div>
-    </div>
+</div>
+    <script src="{{ url_for('static', filename='filter_helper.js') }}"></script>
 {% endblock %}

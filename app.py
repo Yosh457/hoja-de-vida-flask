@@ -349,22 +349,41 @@ def create_app():
     def mi_hoja_de_vida():
         page = request.args.get('page', 1, type=int)
 
-        # Consulta 1: Obtener TODAS las anotaciones pendientes
-        anotaciones_pendientes = Anotacion.query.filter_by(
-            funcionario_id=current_user.id, estado='Pendiente'
-        ).order_by(Anotacion.folio.desc()).all()
+        # --- Lógica de Filtros para Anotaciones ---
+        tipo_filtro = request.args.get('tipo_filtro', '')
+        factor_filtro = request.args.get('factor_filtro', '')
+        subfactor_filtro = request.args.get('subfactor_filtro', '')
 
-        # Consulta 2: Obtener el historial paginado de anotaciones ACEPTADAS
-        historial_pagination = Anotacion.query.filter_by(
-            funcionario_id=current_user.id, estado='Aceptada'
-        ).order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
+        # Consulta base
+        query = Anotacion.query.filter_by(funcionario_id=current_user.id)
+
+        # Filtros
+        if tipo_filtro:
+            query = query.filter(Anotacion.tipo == tipo_filtro)
+        if factor_filtro:
+            query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+        if subfactor_filtro:
+            query = query.filter(Anotacion.subfactor_id == subfactor_filtro)
+
+        # Separamos pendientes del historial
+        anotaciones_pendientes = query.filter(Anotacion.estado == 'Pendiente').order_by(Anotacion.folio.desc()).all()
+        historial_pagination = query.filter(Anotacion.estado == 'Aceptada').order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
-        
+
+        factores_para_filtro = Factor.query.order_by(Factor.nombre).all()
+        # Convertimos los objetos SubFactor en una lista de diccionarios simples
+        subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
+
         return render_template('mi_hoja_de_vida.html', 
                             anotaciones_pendientes=anotaciones_pendientes,
-                            historial_pagination=historial_pagination)
-    
+                            historial_pagination=historial_pagination,
+                            factores_para_filtro=factores_para_filtro,
+                            subfactores_para_filtro=subfactores_para_filtro,
+                            tipo_filtro=tipo_filtro,
+                            factor_filtro=factor_filtro,
+                            subfactor_filtro=subfactor_filtro)
+
     # --- RUTAS DEL PANEL DE JEFE ---
     @app.route('/jefe/panel')
     @check_password_change
@@ -441,23 +460,38 @@ def create_app():
         if funcionario.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
             abort(403)
 
-        # Consulta 1: Obtener TODAS las anotaciones pendientes del funcionario
-        anotaciones_pendientes = Anotacion.query.filter_by(
-            funcionario_id=funcionario.id, estado='Pendiente'
-        ).order_by(Anotacion.folio.desc()).all()
+        # --- Lógica de Filtros para Anotaciones ---
+        tipo_filtro = request.args.get('tipo_filtro', '')
+        factor_filtro = request.args.get('factor_filtro', '')
+        subfactor_filtro = request.args.get('subfactor_filtro', '')
 
-        # Consulta 2: Obtener el historial paginado de anotaciones ACEPTADAS
-        historial_pagination = Anotacion.query.filter_by(
-            funcionario_id=funcionario.id, estado='Aceptada'
-        ).order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
+        query = Anotacion.query.filter_by(funcionario_id=funcionario.id)
+        if tipo_filtro:
+            query = query.filter(Anotacion.tipo == tipo_filtro)
+        if factor_filtro:
+            query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+        if subfactor_filtro:
+            query = query.filter(Anotacion.subfactor_id == subfactor_filtro)
+
+        anotaciones_pendientes = query.filter(Anotacion.estado == 'Pendiente').order_by(Anotacion.folio.desc()).all()
+        historial_pagination = query.filter(Anotacion.estado == 'Aceptada').order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
-        
+
+        factores_para_filtro = Factor.query.order_by(Factor.nombre).all()
+        # Convertimos los objetos SubFactor en una lista de diccionarios simples
+        subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
+
         return render_template('hoja_de_vida_funcionario.html', 
                             funcionario=funcionario, 
                             anotaciones_pendientes=anotaciones_pendientes,
-                            historial_pagination=historial_pagination)
-    
+                            historial_pagination=historial_pagination,
+                            factores_para_filtro=factores_para_filtro,
+                            subfactores_para_filtro=subfactores_para_filtro,
+                            tipo_filtro=tipo_filtro,
+                            factor_filtro=factor_filtro,
+                            subfactor_filtro=subfactor_filtro)
+
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
     def ver_anotacion(folio):
