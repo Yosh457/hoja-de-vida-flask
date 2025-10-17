@@ -33,13 +33,18 @@
             </thead>
             <tbody>
                 {% for funcionario in pagination.items %}
-                <tr class="border-b hover:bg-gray-50">
+                <tr class="border-b hover:bg-gray-50 {% if not funcionario.activo %}opacity-50 bg-gray-50{% endif %}">
                     <td class="py-3 px-4">{{ funcionario.nombre_completo }}</td>
                     <td class="py-3 px-4">{{ funcionario.rut }}</td>
                     <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
-                    <td class="py-3 px-4 text-center">
+                    <td class="py-3 px-4 text-center flex justify-center gap-2">
                         <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
-                        <a href="{{ url_for('crear_anotacion', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Anotación</a>
+                        
+                        {% if funcionario.activo %}
+                            <a href="{{ url_for('crear_anotacion', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Anotación</a>
+                        {% else %}
+                            <span class="btn btn-primary opacity-50 cursor-not-allowed" title="No se pueden crear anotaciones a usuarios inactivos">Crear Anotación</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
