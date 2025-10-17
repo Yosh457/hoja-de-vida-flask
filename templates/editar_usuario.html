@@ -47,19 +47,17 @@
                     </select>
                 </div>
                 <div>
-                    <label for="unidad_id" class="block text-sm font-medium text-gray-700">Unidad</label>
-                    <select name="unidad_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                        {% for unidad in unidades %}
-                            <option value="{{ unidad.id }}" {% if unidad.id == usuario.unidad_id %}selected{% endif %}>{{ unidad.nombre }}</option>
+                    <label for="establecimiento_id" class="block text-sm font-medium text-gray-700">Establecimiento</label>
+                    <select name="establecimiento_id" id="establecimiento-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        {% for est in establecimientos %}
+                            <option value="{{ est.id }}" {% if est.id == usuario.establecimiento_id %}selected{% endif %}>{{ est.nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
-                    <label for="establecimiento_id" class="block text-sm font-medium text-gray-700">Establecimiento</label>
-                    <select name="establecimiento_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                        {% for est in establecimientos %}
-                            <option value="{{ est.id }}" {% if est.id == usuario.establecimiento_id %}selected{% endif %}>{{ est.nombre }}</option>
-                        {% endfor %}
+                    <label for="unidad_id" class="block text-sm font-medium text-gray-700">Unidad</label>
+                    <select name="unidad_id" id="unidad-select" data-selected-unidad-id="{{ usuario.unidad_id }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required disabled>
+                        <option value="" disabled selected>Cargando unidades...</option>
                     </select>
                 </div>
                 <div>
@@ -107,5 +105,6 @@
 </div>
 
 <script src="{{ url_for('static', filename='modal_handler.js') }}"></script>
+<script src="{{ url_for('static', filename='user_form.js') }}"></script>
 
 {% endblock %}

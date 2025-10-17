@@ -25,12 +25,15 @@ class Establecimiento(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), unique=True, nullable=False)
     usuarios = db.relationship('Usuario', back_populates='establecimiento')
+    unidades = db.relationship('Unidad', back_populates='establecimiento')
 
 class Unidad(db.Model):
     __tablename__ = 'Unidades'
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), unique=True, nullable=False)
+    nombre = db.Column(db.String(100), nullable=False) 
     usuarios = db.relationship('Usuario', back_populates='unidad')
+    establecimiento_id = db.Column(db.Integer, db.ForeignKey('Establecimientos.id'), nullable=False)
+    establecimiento = db.relationship('Establecimiento', back_populates='unidades')
 
 class CalidadJuridica(db.Model):
     __tablename__ = 'CalidadesJuridicas'

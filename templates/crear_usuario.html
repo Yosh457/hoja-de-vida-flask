@@ -46,21 +46,18 @@
                     </select>
                 </div>
                 <div>
-                    <label for="unidad_id" class="block text-sm font-medium text-gray-700">Unidad</label>
-                    <select name="unidad_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                        <option value="" disabled selected>Selecciona una unidad</option>
-                        {% for unidad in unidades %}
-                            <option value="{{ unidad.id }}">{{ unidad.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div>
                     <label for="establecimiento_id" class="block text-sm font-medium text-gray-700">Establecimiento</label>
-                    <select name="establecimiento_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                    <select name="establecimiento_id" id="establecimiento-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
                         <option value="" disabled selected>Selecciona un establecimiento</option>
                         {% for est in establecimientos %}
                             <option value="{{ est.id }}">{{ est.nombre }}</option>
                         {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="unidad_id" class="block text-sm font-medium text-gray-700">Unidad</label>
+                    <select name="unidad_id" id="unidad-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required disabled>
+                        <option value="" disabled selected>Selecciona un establecimiento primero...</option>
                     </select>
                 </div>
                 <div>
@@ -97,4 +94,5 @@
         </div>
     </form>
 </div>
+<script src="{{ url_for('static', filename='user_form.js') }}"></script>
 {% endblock %}

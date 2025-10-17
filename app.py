@@ -11,7 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from flask_login import LoginManager
 from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor
 from datetime import date, datetime, timedelta
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from functools import wraps
@@ -593,6 +593,14 @@ def create_app():
         return Response(pdf,
                         mimetype='application/pdf',
                         headers={'Content-Disposition': f'attachment;filename=hoja_de_vida_{funcionario.rut}.pdf'})
+    
+    @app.route('/api/unidades/<int:establecimiento_id>')
+    @login_required
+    def get_unidades_por_establecimiento(establecimiento_id):
+        unidades = Unidad.query.filter_by(establecimiento_id=establecimiento_id).order_by(Unidad.nombre).all()
+        # Convertimos la lista de objetos a un formato JSON que JS pueda leer
+        unidades_lista = [{'id': u.id, 'nombre': u.nombre} for u in unidades]
+        return jsonify(unidades_lista)
     
     return app
 
