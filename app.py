@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 # Importamos las extensiones y los modelos que usaremos
 from flask_login import LoginManager
-from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor
+from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor, Log
 from datetime import date, datetime, timedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
@@ -126,6 +126,10 @@ def create_app():
             
             # Si todo es correcto, iniciamos la sesión del usuario
             login_user(usuario)
+            # --- ¡REGISTRAR LOG! ---
+            registrar_log(accion="Inicio de Sesión", detalles=f"Usuario {usuario.nombre_completo} (ID: {usuario.id}) inició sesión.")
+            db.session.commit() # Guardamos el log
+            # ------------------------
             flash('¡Has iniciado sesión correctamente!', 'success')
             # --- LÓGICA DE REDIRECCIÓN POR ROL ---
             if usuario.rol.nombre == 'Admin':
@@ -141,6 +145,11 @@ def create_app():
     @app.route('/logout')
     @login_required # Solo un usuario logueado puede desloguearse
     def logout():
+        # --- ¡REGISTRAR LOG! ---
+        # Lo hacemos antes para aún tener acceso a current_user
+        registrar_log(accion="Cierre de Sesión", detalles=f"Usuario {current_user.nombre_completo} (ID: {current_user.id}) cerró sesión.")
+        db.session.commit() # Guardamos el log
+        # ------------------------
         logout_user()
         flash('Has cerrado la sesión.', 'success')
         return redirect(url_for('login'))
@@ -331,7 +340,13 @@ def create_app():
         # Invertimos su estado actual
         usuario.activo = not usuario.activo
         
-        # Guardamos el cambio
+        # --- ¡REGISTRAR LOG! ---
+        accion_realizada = "Activación" if usuario.activo else "Desactivación"
+        detalles_log = (f"Admin {current_user.nombre_completo} (ID: {current_user.id}) realizó "
+                    f"{accion_realizada} del usuario {usuario.nombre_completo} (ID: {usuario.id}).")
+        registrar_log(accion=f"{accion_realizada} de Usuario", detalles=detalles_log)
+        # ------------------------
+        # Guardamos el cambio (usuario y log)
         db.session.commit()
         
         # Enviamos un mensaje de confirmación
@@ -435,9 +450,21 @@ def create_app():
 
             # Guardamos en la base de datos
             db.session.add(nueva_anotacion)
+            # Flush para obtener el folio asignado antes del commit final
+            db.session.flush()
+
+            # --- ¡REGISTRAR LOG! ---
+            detalles_log = (f"Jefe {current_user.nombre_completo} (ID: {current_user.id}) creó anotación "
+                        f"{nueva_anotacion.tipo} (Folio: {nueva_anotacion.folio}) para "
+                        f"{funcionario.nombre_completo} (ID: {funcionario.id}). "
+                        f"Factor: {nueva_anotacion.subfactor.factor.nombre}, "
+                        f"SubFactor: {nueva_anotacion.subfactor.nombre}.")
+            registrar_log(accion="Creación de Anotación", detalles=detalles_log)
+            # ------------------------
+            # Guardamos la anotación y el log juntos
             db.session.commit()
 
-            # --- ¡NUEVO! Enviamos el correo de notificación ---
+            # --- Enviamos el correo de notificación ---
             enviar_correo_notificacion_anotacion(nueva_anotacion)
 
             flash(f'Anotación creada con éxito para {funcionario.nombre_completo}.', 'success')
@@ -522,7 +549,12 @@ def create_app():
                 observaciones = request.form.get('observacion_funcionario')
                 anotacion.observacion_funcionario = observaciones if observaciones else "Sin observaciones."
 
-                # Guardamos los cambios en la base de datos
+                # --- ¡REGISTRAR LOG! ---
+                detalles_log = (f"Funcionario {current_user.nombre_completo} (ID: {current_user.id}) "
+                            f"aceptó la anotación Folio: {anotacion.folio}.")
+                registrar_log(accion="Aceptación de Anotación", detalles=detalles_log)
+                # ------------------------
+                # Guardamos los cambios en la base de datos (anotación y log)
                 db.session.commit()
 
                 flash('Has confirmado la lectura de la anotación.', 'success')
@@ -729,6 +761,24 @@ def enviar_correo_notificacion_anotacion(anotacion):
     except Exception as e:
         print(f"Error al enviar correo de notificación: {e}")
 
+def registrar_log(accion, detalles=""):
+    """
+    Crea y añade un nuevo registro de log a la sesión de la base de datos.
+    Nota: No hace commit aquí; el commit se debe hacer en la ruta principal.
+    """
+    # Intentamos obtener el usuario actual. Si no hay nadie logueado (ej: script), ponemos None.
+    user_id = current_user.id if current_user.is_authenticated else None
+    user_name = current_user.nombre_completo if current_user.is_authenticated else "Sistema"
+
+    nuevo_log = Log(
+        usuario_id=user_id,
+        usuario_nombre=user_name,
+        accion=accion,
+        detalles=detalles
+    )
+    db.session.add(nuevo_log)
+    # El db.session.commit() se hará en la ruta que llama a esta función.
+    
 # --- USER LOADER ---
 # Esta función es crucial. Flask-Login la usa para recargar el objeto de usuario 
 # desde el ID de usuario almacenado en la sesión.

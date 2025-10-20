@@ -127,3 +127,18 @@ class Anotacion(db.Model):
     # Como hay dos relaciones a la misma tabla (Usuarios), debemos ser explícitos.
     funcionario = db.relationship('Usuario', foreign_keys=[funcionario_id], backref='anotaciones_recibidas')
     jefe = db.relationship('Usuario', foreign_keys=[jefe_id], backref='anotaciones_emitidas')
+
+class Log(db.Model):
+    __tablename__ = 'logs'
+    id = db.Column(db.Integer, primary_key=True)
+    # Usamos datetime.utcnow para guardar la hora en UTC (más estándar)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow) 
+    usuario_id = db.Column(db.Integer, db.ForeignKey('Usuarios.id'), nullable=True) # Permitimos NULL
+    usuario_nombre = db.Column(db.String(255))
+    accion = db.Column(db.String(255), nullable=False)
+    detalles = db.Column(db.Text)
+
+    # Relación opcional para poder acceder al objeto Usuario desde un Log
+    # Usamos backref para poder hacer usuario.logs si es necesario en el futuro
+    # Y lazy='joined' para que cargue los datos del usuario automáticamente si se necesitan
+    usuario = db.relationship('Usuario', backref=db.backref('logs', lazy=True), foreign_keys=[usuario_id])
