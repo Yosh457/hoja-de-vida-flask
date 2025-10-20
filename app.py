@@ -357,6 +357,43 @@ def create_app():
             
         return redirect(url_for('admin_panel'))
     
+    @app.route('/admin/ver_logs')
+    @login_required
+    @check_password_change
+    @admin_required
+    def ver_logs():
+        page = request.args.get('page', 1, type=int)
+        
+        # --- Lógica de Filtros para Logs ---
+        usuario_filtro_id = request.args.get('usuario_id', '')
+        accion_filtro = request.args.get('accion', '') # Podríamos añadir filtro por acción si quisiéramos
+
+        # Consulta base, ordenada por fecha descendente
+        query = Log.query.order_by(Log.timestamp.desc())
+
+        # Aplicar filtros
+        if usuario_filtro_id:
+            query = query.filter(Log.usuario_id == usuario_filtro_id)
+        # if accion_filtro: # Ejemplo si quisiéramos filtrar por acción
+        #     query = query.filter(Log.accion.ilike(f'%{accion_filtro}%'))
+            
+        # Paginamos los resultados
+        logs_pagination = query.paginate(page=page, per_page=15, error_out=False) # Mostramos 15 logs por página
+
+        # Obtenemos todos los usuarios para el menú desplegable del filtro
+        todos_los_usuarios = Usuario.query.order_by(Usuario.nombre_completo).all()
+        
+        # Creamos un diccionario con los filtros actuales para pasarlo a la plantilla
+        filtros_actuales = {
+            'usuario_id': usuario_filtro_id,
+            'accion': accion_filtro
+        }
+
+        return render_template('ver_logs.html',
+                            pagination=logs_pagination,
+                            todos_los_usuarios=todos_los_usuarios,
+                            filtros=filtros_actuales)
+
     # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---
     @app.route('/hoja_de_vida')
     @login_required
