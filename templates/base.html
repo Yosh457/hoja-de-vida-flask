@@ -59,6 +59,16 @@
                             <option value="">Todos</option>
                             </select>
                     </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="fecha_inicio" class="block text-sm font-medium text-gray-700">Fecha Desde:</label>
+                            <input type="date" name="fecha_inicio" id="fecha_inicio" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label for="fecha_fin" class="block text-sm font-medium text-gray-700">Fecha Hasta:</label>
+                            <input type="date" name="fecha_fin" id="fecha_fin" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-4 mt-6 pt-4 border-t">
                     <button type="button" id="cancel-report" class="btn btn-secondary">Cancelar</button>

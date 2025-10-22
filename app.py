@@ -400,32 +400,50 @@ def create_app():
     @check_password_change
     def mi_hoja_de_vida():
         page = request.args.get('page', 1, type=int)
-
+        
         # --- Lógica de Filtros para Anotaciones ---
         tipo_filtro = request.args.get('tipo_filtro', '')
         factor_filtro = request.args.get('factor_filtro', '')
         subfactor_filtro = request.args.get('subfactor_filtro', '')
+        fecha_inicio_str = request.args.get('fecha_inicio', '')
+        fecha_fin_str = request.args.get('fecha_fin', '')
 
         # Consulta base
         query = Anotacion.query.filter_by(funcionario_id=current_user.id)
 
-        # Filtros
+        # Filtros generales (se aplican a pendientes y historial)
         if tipo_filtro:
             query = query.filter(Anotacion.tipo == tipo_filtro)
         if factor_filtro:
             query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
         if subfactor_filtro:
             query = query.filter(Anotacion.subfactor_id == subfactor_filtro)
-
-        # Separamos pendientes del historial
+        
+        # Separamos pendientes (sin paginación, siempre visibles)
         anotaciones_pendientes = query.filter(Anotacion.estado == 'Pendiente').order_by(Anotacion.folio.desc()).all()
-        historial_pagination = query.filter(Anotacion.estado == 'Aceptada').order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
+
+        # Consulta específica para el historial paginado
+        historial_query = query.filter(Anotacion.estado == 'Aceptada')
+        
+        # Aplicar filtros de fecha SOLO al historial
+        try:
+            if fecha_inicio_str:
+                fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+                historial_query = historial_query.filter(Anotacion.fecha_creacion >= fecha_inicio)
+            if fecha_fin_str:
+                fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+                historial_query = historial_query.filter(Anotacion.fecha_creacion <= fecha_fin)
+        except ValueError:
+            flash("Formato de fecha inválido. Por favor, usa YYYY-MM-DD.", "danger")
+            return redirect(request.path) 
+
+        # Paginamos el historial ya filtrado
+        historial_pagination = historial_query.order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
-
-        # Convertimos los objetos Factor en una lista de diccionarios simples
+        
+        # Datos para los filtros
         factores_para_filtro = [{'id': f.id, 'nombre': f.nombre} for f in Factor.query.order_by(Factor.nombre).all()]
-        # Convertimos los objetos SubFactor en una lista de diccionarios simples
         subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
 
         return render_template('mi_hoja_de_vida.html', 
@@ -435,7 +453,9 @@ def create_app():
                             subfactores_para_filtro=subfactores_para_filtro,
                             tipo_filtro=tipo_filtro,
                             factor_filtro=factor_filtro,
-                            subfactor_filtro=subfactor_filtro)
+                            subfactor_filtro=subfactor_filtro,
+                            fecha_inicio=fecha_inicio_str,
+                            fecha_fin=fecha_fin_str)
 
     # --- RUTAS DEL PANEL DE JEFE ---
     @app.route('/jefe/panel')
@@ -529,8 +549,13 @@ def create_app():
         tipo_filtro = request.args.get('tipo_filtro', '')
         factor_filtro = request.args.get('factor_filtro', '')
         subfactor_filtro = request.args.get('subfactor_filtro', '')
-
+        fecha_inicio_str = request.args.get('fecha_inicio', '')
+        fecha_fin_str = request.args.get('fecha_fin', '')
+        
+        # Consulta base
         query = Anotacion.query.filter_by(funcionario_id=funcionario.id)
+        
+        # Filtros generales
         if tipo_filtro:
             query = query.filter(Anotacion.tipo == tipo_filtro)
         if factor_filtro:
@@ -538,16 +563,33 @@ def create_app():
         if subfactor_filtro:
             query = query.filter(Anotacion.subfactor_id == subfactor_filtro)
 
+        # Separamos pendientes
         anotaciones_pendientes = query.filter(Anotacion.estado == 'Pendiente').order_by(Anotacion.folio.desc()).all()
-        historial_pagination = query.filter(Anotacion.estado == 'Aceptada').order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
+
+        # Consulta específica para historial
+        historial_query = query.filter(Anotacion.estado == 'Aceptada')
+
+        # Aplicar filtros de fecha SOLO al historial
+        try:
+            if fecha_inicio_str:
+                fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+                historial_query = historial_query.filter(Anotacion.fecha_creacion >= fecha_inicio)
+            if fecha_fin_str:
+                fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+                historial_query = historial_query.filter(Anotacion.fecha_creacion <= fecha_fin)
+        except ValueError:
+            flash("Formato de fecha inválido. Por favor, usa YYYY-MM-DD.", "danger")
+            return redirect(request.path) 
+
+        # Paginamos historial
+        historial_pagination = historial_query.order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
-
-        # Convertimos los objetos Factor en una lista de diccionarios simples
+        
+        # Datos para los filtros
         factores_para_filtro = [{'id': f.id, 'nombre': f.nombre} for f in Factor.query.order_by(Factor.nombre).all()]
-        # Convertimos los objetos SubFactor en una lista de diccionarios simples
         subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
-
+        
         return render_template('hoja_de_vida_funcionario.html', 
                             funcionario=funcionario, 
                             anotaciones_pendientes=anotaciones_pendientes,
@@ -556,7 +598,9 @@ def create_app():
                             subfactores_para_filtro=subfactores_para_filtro,
                             tipo_filtro=tipo_filtro,
                             factor_filtro=factor_filtro,
-                            subfactor_filtro=subfactor_filtro)
+                            subfactor_filtro=subfactor_filtro,
+                            fecha_inicio=fecha_inicio_str,
+                            fecha_fin=fecha_fin_str)
 
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
@@ -630,6 +674,7 @@ def create_app():
             usuario = Usuario.query.filter_by(email=email).first()
 
             if usuario:
+                # Generar token, guardar y enviar correo
                 token = secrets.token_hex(16)
                 expiracion = datetime.utcnow() + timedelta(hours=1)
 
@@ -640,9 +685,12 @@ def create_app():
 
                 # Enviar correo
                 enviar_correo_reseteo(usuario, token)
+                # Mensaje de éxito al usuario
+                flash(f'Se ha enviado un enlace para restablecer la contraseña a {email}.', 'success')
 
-            # Por seguridad, mostramos el mismo mensaje exista o no el correo
-            flash('Si tu correo está en nuestro sistema, recibirás un enlace para restablecer tu contraseña.', 'info')
+            else:
+                # Mensaje de error si el email no está registrado
+                flash(f'El correo electrónico {email} no se encuentra registrado en el sistema.', 'danger')
             return redirect(url_for('login'))
 
         return render_template('solicitar_reseteo.html')
@@ -685,6 +733,8 @@ def create_app():
         # --- INICIO: Lógica de Filtros para el PDF ---
         tipo_filtro = request.args.get('tipo', '')
         factor_filtro = request.args.get('factor', '')
+        fecha_inicio_str = request.args.get('fecha_inicio', '')
+        fecha_fin_str = request.args.get('fecha_fin', '')
 
         # Empezamos con la consulta base de todas las anotaciones del funcionario
         query = Anotacion.query.filter_by(funcionario_id=funcionario.id)
@@ -695,18 +745,38 @@ def create_app():
         
         if factor_filtro:
             query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+        # ¡NUEVO! Aplicar filtros de fecha si se proporcionaron
+        try:
+            if fecha_inicio_str:
+                fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+                query = query.filter(Anotacion.fecha_creacion >= fecha_inicio)
+            if fecha_fin_str:
+                fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+                query = query.filter(Anotacion.fecha_creacion <= fecha_fin)
+        except ValueError:
+            flash("Formato de fecha inválido. Por favor, usa YYYY-MM-DD.", "danger")
+            # Podríamos redirigir o manejar el error de otra forma
+            return redirect(request.referrer or url_for('mi_hoja_de_vida')) # Vuelve a la página anterior
         
         # Obtenemos las anotaciones filtradas y ordenadas
         anotaciones = query.order_by(Anotacion.fecha_creacion.asc()).all()
         # --- FIN: Lógica de Filtros ---
-
+        # (Opcional) Pasar las fechas al template del PDF para mostrarlas
+        periodo_reporte = ""
+        if fecha_inicio_str and fecha_fin_str:
+            periodo_reporte = f"Período: {fecha_inicio.strftime('%d/%m/%Y')} - {fecha_fin.strftime('%d/%m/%Y')}"
+        elif fecha_inicio_str:
+            periodo_reporte = f"Desde: {fecha_inicio.strftime('%d/%m/%Y')}"
+        elif fecha_fin_str:
+            periodo_reporte = f"Hasta: {fecha_fin.strftime('%d/%m/%Y')}"
         fecha_actual = date.today().strftime('%d/%m/%Y')
 
         # Renderizamos la plantilla HTML con los datos (ya filtrados)
         html_renderizado = render_template('reporte_hoja_de_vida.html', 
                                         funcionario=funcionario, 
                                         anotaciones=anotaciones,
-                                        fecha_actual=fecha_actual)
+                                        fecha_actual=fecha_actual,
+                                        periodo_reporte=periodo_reporte)
 
         # Usamos WeasyPrint para convertir el HTML a PDF
         pdf = HTML(string=html_renderizado).write_pdf()

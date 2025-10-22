@@ -60,8 +60,7 @@
             data-subfactores='{{ subfactores_para_filtro|tojson }}' 
             data-selected-subfactor="{{ subfactor_filtro }}">
         </div>
-
-        <form method="get" class="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+        <form method="get" class="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
             <div>
                 <label for="tipo_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Tipo:</label>
                 <select name="tipo_filtro" id="tipo_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
@@ -85,7 +84,15 @@
                     <option value="">Selecciona un factor primero...</option>
                 </select>
             </div>
-            <div class="md:col-span-3 flex gap-2">
+            <div>
+                <label for="fecha_inicio" class="block text-sm font-medium text-gray-700">Desde:</label>
+                <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ fecha_inicio or '' }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div>
+                <label for="fecha_fin" class="block text-sm font-medium text-gray-700">Hasta:</label>
+                <input type="date" name="fecha_fin" id="fecha_fin" value="{{ fecha_fin or '' }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div class="md:col-span-2 flex gap-2">
                 <a href="{{ request.path }}" class="w-full btn btn-secondary">Limpiar</a>
                 <button type="submit" class="w-full btn btn-primary">Buscar</button>
             </div>
@@ -133,5 +140,5 @@
         {% endif %}
     </div>
 </div>
-    <script src="{{ url_for('static', filename='filter_helper.js') }}"></script>
+<script src="{{ url_for('static', filename='filter_helper.js') }}"></script>
 {% endblock %}

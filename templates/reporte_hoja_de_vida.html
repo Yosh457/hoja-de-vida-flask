@@ -53,13 +53,16 @@
     </style>
 </head>
 <body>
-    <h1>Reporte de Hoja de Vida</h1>
+    <h1>Reporte de Registros de Eventos Funcionarios</h1>
     
     <div class="info-funcionario">
         <p><strong>Funcionario:</strong> {{ funcionario.nombre_completo }}</p>
         <p><strong>RUT:</strong> {{ funcionario.rut }}</p>
         <p><strong>Unidad:</strong> {{ funcionario.unidad.nombre }}</p>
         <p><strong>Fecha de Generación:</strong> {{ fecha_actual }}</p>
+        {% if periodo_reporte %}
+        <p><strong>{{ periodo_reporte }}</strong></p>
+        {% endif %}
     </div>
 
     {% for anotacion in anotaciones %}
