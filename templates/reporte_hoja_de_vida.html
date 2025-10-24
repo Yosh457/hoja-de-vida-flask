@@ -53,7 +53,18 @@
     </style>
 </head>
 <body>
-    <h1>Reporte de Registros de Eventos Funcionarios</h1>
+    <div style="display: flex; align-items: self-end; border-bottom: 2px solid #34495e; padding-bottom: 10px; margin-bottom: 30px;">
+        <img src="{{ url_for('static', filename='Logo Red APS.png', _external=True) }}" 
+             alt="Logo Red APS" 
+             style="height: 60px; width: auto; margin-right: 20px; flex-shrink: 0;">
+        
+        <h1 style="flex-grow: 1; text-align: center; margin: 0; color: #2c3e50; border-bottom: none;">
+            Reporte de Registros de Eventos Funcionarios
+        </h1>
+        
+        <div style="width: 80px; flex-shrink: 0;"></div>
+
+    </div>
     
     <div class="info-funcionario">
         <p><strong>Funcionario:</strong> {{ funcionario.nombre_completo }}</p>
