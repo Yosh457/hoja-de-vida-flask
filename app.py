@@ -544,8 +544,14 @@ def create_app():
             enviar_correo_notificacion_anotacion(nueva_anotacion)
 
             flash(f'Anotación creada con éxito para {funcionario.nombre_completo}.', 'success')
-            return redirect(url_for('panel_jefe'))
 
+            # --- Redirección Condicional por Rol ---
+            if current_user.rol.nombre == 'Jefa Salud':
+                return redirect(url_for('panel_jefa_salud'))
+            else: # Asume que es un Jefe normal
+                return redirect(url_for('panel_jefe'))
+            # --- Fin Redirección Condicional ---
+            
         # Si es GET, cargamos los datos para los menús desplegables
         factores = Factor.query.order_by(Factor.id).all()
         subfactores = SubFactor.query.order_by(SubFactor.id).all()

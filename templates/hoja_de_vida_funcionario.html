@@ -9,15 +9,16 @@
             <h2 class="text-2xl font-bold text-gray-800">Hoja de Vida de: <span class="text-blue-600">{{ funcionario.nombre_completo }}</span></h2>
             <p class="text-gray-500">{{ funcionario.rol.nombre }} en {{ funcionario.unidad.nombre }}</p>
         </div>
-        <div>
+        <div class="flex items-center gap-4">
             <button class="btn btn-primary open-report-modal"
                     data-pdf-url="{{ url_for('generar_pdf', funcionario_id=current_user.id if 'mi_hoja_de_vida' in request.endpoint else funcionario.id) }}"
                     data-factores='{{ factores_para_filtro|tojson|safe }}'>
                 Generar Reporte PDF
             </button>
             {% if current_user.rol.nombre == 'Jefa Salud' %}
-                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
-            {% else %} {# Asume que es un Jefe normal #}
+                <a href="{{ url_for('ver_equipo_jefe', jefe_id=funcionario.jefe_directo_id) }}" class="btn btn-secondary">Volver a Ver Unidad</a> 
+                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel Principal</a>
+            {% elif current_user.rol.nombre == 'Jefe' %} {# Condición más explícita para Jefe #}
                 <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
             {% endif %}
         </div>
