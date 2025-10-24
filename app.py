@@ -19,6 +19,7 @@ from flask import abort
 from flask import Response
 from weasyprint import HTML
 from flask_login import current_user
+from sqlalchemy import or_
 # Inicializamos el gestor de logins
 login_manager = LoginManager()
 
@@ -32,12 +33,22 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# --- DECORADOR DE ROL JEFA SALUD ---
+def jefa_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Permite el acceso si el rol es 'Jefa Salud' O 'Admin'
+        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefa Salud']):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- DECORADOR DE ROL JEFE ---
 def jefe_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Permitimos el acceso si el usuario es Admin O Jefe.
-        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefe']):
+        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefa Salud', 'Jefe']):
             abort(403) # Error 403: Forbidden
         return f(*args, **kwargs)
     return decorated_function
@@ -101,6 +112,8 @@ def create_app():
         if current_user.is_authenticated:
             if current_user.rol.nombre == 'Admin':
                 return redirect(url_for('admin_panel'))
+            elif current_user.rol.nombre == 'Jefa Salud': # ¡NUEVO!
+                return redirect(url_for('panel_jefa_salud')) # ¡NUEVO!
             elif current_user.rol.nombre == 'Jefe':
                 return redirect(url_for('panel_jefe'))
             else:
@@ -134,6 +147,8 @@ def create_app():
             # --- LÓGICA DE REDIRECCIÓN POR ROL ---
             if usuario.rol.nombre == 'Admin':
                 return redirect(url_for('admin_panel'))
+            elif usuario.rol.nombre == 'Jefa Salud': # ¡NUEVO!
+                return redirect(url_for('panel_jefa_salud')) # ¡NUEVO!
             elif usuario.rol.nombre == 'Jefe':
                 return redirect(url_for('panel_jefe'))
             else:
@@ -272,7 +287,9 @@ def create_app():
         establecimientos = Establecimiento.query.order_by(Establecimiento.nombre).all()
         calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
         categorias = Categoria.query.order_by(Categoria.nombre).all()
-        jefes = Usuario.query.filter(Usuario.rol.has(nombre='Jefe')).all()
+        jefes = Usuario.query.join(Usuario.rol).filter(
+            or_(Rol.nombre == 'Jefe', Rol.nombre == 'Jefa Salud')
+        ).order_by(Usuario.nombre_completo).all()
 
         return render_template('crear_usuario.html', 
                                roles=roles, 
@@ -319,7 +336,9 @@ def create_app():
         establecimientos = Establecimiento.query.order_by(Establecimiento.nombre).all()
         calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
         categorias = Categoria.query.order_by(Categoria.nombre).all()
-        jefes = Usuario.query.filter(Usuario.rol.has(nombre='Jefe')).all()
+        jefes = Usuario.query.join(Usuario.rol).filter(
+            or_(Rol.nombre == 'Jefe', Rol.nombre == 'Jefa Salud')
+        ).order_by(Usuario.nombre_completo).all()
 
         return render_template('editar_usuario.html', 
                                usuario=usuario_a_editar,
@@ -542,8 +561,22 @@ def create_app():
     def ver_hoja_de_vida_funcionario(funcionario_id):
         page = request.args.get('page', 1, type=int)
         funcionario = Usuario.query.get_or_404(funcionario_id)
-        if funcionario.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
+        # --- Verificación de Permisos Mejorada ---
+        es_admin = (current_user.rol.nombre == 'Admin')
+        es_jefe_directo = (funcionario.jefe_directo_id == current_user.id)
+        
+        # Verificamos si la Jefa de Salud es la jefa del jefe del funcionario
+        es_jefa_salud_del_jefe = False
+        if funcionario.jefe_directo: # Nos aseguramos de que el funcionario tenga un jefe
+            jefe_del_funcionario = funcionario.jefe_directo
+            # Verificamos si el usuario actual es la jefa de salud Y si es la jefa del jefe del funcionario
+            if current_user.rol.nombre == 'Jefa Salud' and jefe_del_funcionario.jefe_directo_id == current_user.id:
+                es_jefa_salud_del_jefe = True
+
+        # Permitir acceso si es Admin, el Jefe Directo, o la Jefa de Salud del Jefe Directo
+        if not (es_admin or es_jefe_directo or es_jefa_salud_del_jefe):
             abort(403)
+        # --- Fin Verificación ---
 
         # --- Lógica de Filtros para Anotaciones ---
         tipo_filtro = request.args.get('tipo_filtro', '')
@@ -601,23 +634,88 @@ def create_app():
                             subfactor_filtro=subfactor_filtro,
                             fecha_inicio=fecha_inicio_str,
                             fecha_fin=fecha_fin_str)
+    # app.py (dentro de create_app)
 
+    # --- RUTAS DEL PANEL JEFA DE SALUD ---
+    @app.route('/jefa/panel')
+    @login_required
+    @check_password_change
+    @jefa_required
+    def panel_jefa_salud():
+        page = request.args.get('page', 1, type=int)
+        busqueda = request.args.get('busqueda', '')
+
+        # Buscamos solo a los usuarios cuyo jefe directo sea la jefa actual
+        # Y que además tengan el rol de "Jefe"
+        query = Usuario.query.filter(
+            Usuario.jefe_directo_id == current_user.id,
+            Usuario.rol.has(nombre='Jefe') # Filtramos solo por Jefes
+        )
+
+        if busqueda:
+            from sqlalchemy import or_
+            query = query.filter(
+                or_(
+                    Usuario.nombre_completo.ilike(f'%{busqueda}%'),
+                    Usuario.rut.ilike(f'%{busqueda}%')
+                )
+            )
+
+        jefes_subordinados = query.order_by(Usuario.nombre_completo).paginate(
+            page=page, per_page=10, error_out=False
+        )
+
+        return render_template('panel_jefa_salud.html',
+                            pagination=jefes_subordinados,
+                            busqueda=busqueda)
+    
+    @app.route('/jefa/ver_equipo/<int:jefe_id>')
+    @login_required
+    @check_password_change
+    @jefa_required
+    def ver_equipo_jefe(jefe_id):
+        page = request.args.get('page', 1, type=int)
+
+        # Obtenemos al jefe para mostrar su nombre
+        jefe = Usuario.query.get_or_404(jefe_id)
+        # Verificamos que este jefe realmente dependa de la jefa de salud actual (seguridad extra)
+        if jefe.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
+            abort(403)
+
+        # Buscamos a los funcionarios cuyo jefe directo es el jefe_id
+        query = Usuario.query.filter_by(jefe_directo_id=jefe_id)
+
+        funcionarios_equipo = query.order_by(Usuario.nombre_completo).paginate(
+            page=page, per_page=10, error_out=False
+        )
+
+        return render_template('ver_equipo.html',
+                            jefe=jefe,
+                            pagination=funcionarios_equipo)
+    
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
     def ver_anotacion(folio):
         # Buscamos la anotación por su folio
         anotacion = Anotacion.query.get_or_404(folio)
 
-        # --- Medida de seguridad mejorada ---
-        # Verificamos si el usuario actual es el funcionario de la anotación,
-        # su jefe directo, o un administrador.
+        # --- Medida de seguridad final ---
         funcionario_de_anotacion = anotacion.funcionario
-        es_el_funcionario = (current_user.id == funcionario_de_anotacion.id)
-        es_el_jefe_directo = (current_user.id == funcionario_de_anotacion.jefe_directo_id)
-        es_admin = (current_user.rol.nombre == 'Admin')
+        jefe_que_creo_anotacion = anotacion.jefe # El jefe que creó esta anotación específica
 
-        if not (es_el_funcionario or es_el_jefe_directo or es_admin):
-            abort(403) # Si no cumple ninguna condición, prohibimos el acceso.
+        es_el_funcionario = (current_user.id == funcionario_de_anotacion.id)
+        es_el_jefe_directo_del_funcionario = (current_user.id == funcionario_de_anotacion.jefe_directo_id)
+        es_admin = (current_user.rol.nombre == 'Admin')
+        
+        # Nueva condición: ¿Soy Jefa de Salud Y soy la jefa de quien creó la anotación?
+        es_jefa_salud_del_creador = False
+        if current_user.rol.nombre == 'Jefa Salud' and jefe_que_creo_anotacion and jefe_que_creo_anotacion.jefe_directo_id == current_user.id:
+            es_jefa_salud_del_creador = True
+
+        # Permitir acceso si se cumple CUALQUIERA de las condiciones válidas
+        if not (es_el_funcionario or es_el_jefe_directo_del_funcionario or es_admin or es_jefa_salud_del_creador):
+            abort(403)
+        # --- Fin Medida de seguridad ---
 
         if request.method == 'POST':
             # Verificamos que el checkbox 'tomo_conocimiento' haya sido marcado

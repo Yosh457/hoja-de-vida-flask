@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Equipo de {{ jefe.nombre_completo }}{% endblock %}
+{% from '_macros.html' import render_pagination %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl mx-auto my-12">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Equipo a cargo de: <span class="text-blue-600">{{ jefe.nombre_completo }}</span></h2>
+            <p class="text-gray-500">Unidad: {{ jefe.unidad.nombre }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
+        </div>
+    </div>
+
+    <div>
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="text-left py-3 px-4 font-semibold text-sm">Nombre Completo</th>
+                    <th class="text-left py-3 px-4 font-semibold text-sm">RUT</th>
+                    <th class="text-left py-3 px-4 font-semibold text-sm">Unidad</th>
+                    <th class="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for funcionario in pagination.items %}
+                <tr class="border-b hover:bg-gray-50 {% if not funcionario.activo %}opacity-50 bg-gray-50{% endif %}">
+                    <td class="py-3 px-4">{{ funcionario.nombre_completo }}</td>
+                    <td class="py-3 px-4">{{ funcionario.rut }}</td>
+                    <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
+                    <td class="py-3 px-4 text-center">
+                        <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-gray-500">Este jefe no tiene funcionarios a su cargo.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {{ render_pagination(pagination, 'ver_equipo_jefe', extra_args={'jefe_id': jefe.id}) }}
+    </div>
+</div>
+{% endblock %}

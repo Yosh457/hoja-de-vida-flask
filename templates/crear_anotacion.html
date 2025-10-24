@@ -18,7 +18,7 @@
 
         <div>
             <label for="factor_id" class="block text-sm font-medium text-gray-700">Factor Asociado</label>
-            <select id="factor-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <select id="factor-select" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
                 <option value="" disabled selected>Selecciona un factor para filtrar</option>
                 {% for factor in factores %}
                     <option value="{{ factor.id }}">{{ factor.nombre }}</option>
@@ -42,8 +42,12 @@
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t mt-8">
-            <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Guardar Anotación</button>
+            {% if current_user.rol.nombre == 'Jefa Salud' %}
+                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Cancelar</a>
+            {% else %} {# Asume que es un Jefe normal #}
+                <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Cancelar</a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">Crear Anotación</button>
         </div>
     </form>
 </div>

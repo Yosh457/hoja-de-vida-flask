@@ -15,7 +15,11 @@
                     data-factores='{{ factores_para_filtro|tojson|safe }}'>
                 Generar Reporte PDF
             </button>
-            <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
+            {% if current_user.rol.nombre == 'Jefa Salud' %}
+                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
+            {% else %} {# Asume que es un Jefe normal #}
+                <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
+            {% endif %}
         </div>
     </div>
 
