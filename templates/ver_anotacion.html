@@ -7,6 +7,7 @@
     </div>
 
     <form method="post" id="form-anotacion">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="space-y-4 mb-8">
             <p><strong>Enviada por:</strong> {{ anotacion.jefe.nombre_completo }}</p>
             <p><strong>Fecha de Creación:</strong> {{ anotacion.fecha_creacion.strftime('%d-%m-%Y') }}</p>

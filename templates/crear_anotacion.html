@@ -7,6 +7,7 @@
     </div>
 
     <form method="post" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div>
             <label for="tipo" class="block text-sm font-medium text-gray-700">Tipo de Anotación</label>
             <select name="tipo" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>

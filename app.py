@@ -8,20 +8,21 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 # Importamos las extensiones y los modelos que usaremos
-from flask_login import LoginManager
 from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor, Log
 from datetime import date, datetime, timedelta
-from flask import render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
+from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from functools import wraps
-from flask import abort
-from flask import Response
 from weasyprint import HTML
-from flask_login import current_user
 from sqlalchemy import or_
+from flask_wtf.csrf import CSRFProtect
+
 # Inicializamos el gestor de logins
 login_manager = LoginManager()
+
+# Crea la instancia globalmente o antes de create_app
+csrf = CSRFProtect()
 
 # --- DECORADOR DE ROL ---
 def admin_required(f):
@@ -90,6 +91,9 @@ def create_app():
 
     # Conectamos el gestor de logins con la aplicación
     login_manager.init_app(app)
+
+    # Inicializa la protección CSRF para la app
+    csrf.init_app(app)
     
     # Le decimos a Flask-Login cuál es la página de inicio de sesión.
     # Si un usuario no autenticado intenta acceder a una página protegida, será redirigido aquí.
