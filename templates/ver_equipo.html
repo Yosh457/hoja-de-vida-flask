@@ -1,16 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Equipo de {{ jefe.nombre_completo }}{% endblock %}
+{% block title %}Equipo de {{ encargado.nombre_completo }}{% endblock %} {# Cambiado 'jefe' por 'encargado' #}
 {% from '_macros.html' import render_pagination %}
 
 {% block content %}
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl mx-auto my-12">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-gray-800">Equipo a cargo de: <span class="text-blue-600">{{ jefe.nombre_completo }}</span></h2>
-            <p class="text-gray-500">Unidad: {{ jefe.unidad.nombre }}</p>
+            {# Cambiado 'jefe' por 'encargado' #}
+            <h2 class="text-2xl font-bold text-gray-800">Equipo a cargo de: <span class="text-blue-600">{{ encargado.nombre_completo }}</span></h2>
+            <p class="text-gray-500">Unidad: {{ encargado.unidad.nombre }}</p>
         </div>
         <div>
-            <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
+            {# --- LÓGICA DE "VOLVER" DINÁMICA --- #}
+            {% if current_user.rol.nombre == 'Jefa Salud' %}
+                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
+            {% elif current_user.rol.nombre == 'Encargado de Recinto' %}
+                <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Volver al Panel</a>
+            {% endif %}
         </div>
     </div>
 
@@ -36,12 +42,14 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-gray-500">Este jefe no tiene funcionarios a su cargo.</td>
+                    {# Cambiado 'jefe' por 'encargado' #}
+                    <td colspan="4" class="text-center py-4 text-gray-500">Este encargado no tiene funcionarios a su cargo.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {{ render_pagination(pagination, 'ver_equipo_jefe', extra_args={'jefe_id': jefe.id}) }}
+        {# --- PAGINACIÓN CORREGIDA --- #}
+        {{ render_pagination(pagination, 'ver_equipo_encargado', extra_args={'encargado_id': encargado.id}) }}
     </div>
 </div>
 {% endblock %}

@@ -6,19 +6,20 @@
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-7xl mx-auto my-12">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-gray-800">Panel Jefa de Salud</h2>
+            <h2 class="text-2xl font-bold text-gray-800">Panel Encargado de Recinto</h2>
             <p class="text-gray-500">Bienvenida, {{ current_user.nombre_completo }}</p>
         </div>
         <div>
+            <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Ver Mi Hoja de Vida</a>
             <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
 
     <div>
-        <h3 class="text-xl font-semibold text-gray-700 mb-4">Encargados a mi cargo</h3>
-        <form method="get" action="{{ url_for('panel_jefa_salud') }}" class="mb-6 bg-gray-50 p-4 rounded-lg flex items-center gap-4">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Encargados de Unidad a mi cargo</h3>
+        <form method="get" action="{{ url_for('panel_encargado_recinto') }}" class="mb-6 bg-gray-50 p-4 rounded-lg flex items-center gap-4">
             <input type="text" name="busqueda" value="{{ busqueda or '' }}" placeholder="Buscar por Nombre o RUT..." class="flex-grow px-4 py-2 border border-gray-300 rounded-lg">
-            <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Limpiar</a>
+            <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Limpiar</a>
             <button type="submit" class="btn btn-primary">Buscar</button>
         </form>
         <table class="min-w-full bg-white">
@@ -26,17 +27,15 @@
                 <tr>
                     <th class="text-left py-3 px-4 font-semibold text-sm">Nombre Completo</th>
                     <th class="text-left py-3 px-4 font-semibold text-sm">RUT</th>
-                    <th class="text-left py-3 px-4 font-semibold text-sm">Rol</th>
                     <th class="text-left py-3 px-4 font-semibold text-sm">Unidad</th>
                     <th class="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                {% for encargado in pagination.items %} {# Cambiamos la variable del bucle a 'encargado' #}
+                {% for encargado in pagination.items %} {# Cambiamos la variable del bucle a 'jefe' #}
                 <tr class="border-b hover:bg-gray-50">
                     <td class="py-3 px-4">{{ encargado.nombre_completo }}</td>
                     <td class="py-3 px-4">{{ encargado.rut }}</td>
-                    <td class="py-3 px-4">{{ encargado.rol.nombre }}</td>
                     <td class="py-3 px-4">{{ encargado.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center flex justify-center gap-2"> {# Usamos flex y gap #}
                         <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=encargado.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
@@ -46,12 +45,12 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-4 text-gray-500">No tienes encargados a tu cargo o no se encontraron resultados.</td>
+                    <td colspan="4" class="text-center py-4 text-gray-500">No tienes jefes a tu cargo o no se encontraron resultados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {{ render_pagination(pagination, 'panel_jefa_salud') }}
+        {{ render_pagination(pagination, 'panel_encargado_recinto') }}
     </div>
 </div>
 {% endblock %}

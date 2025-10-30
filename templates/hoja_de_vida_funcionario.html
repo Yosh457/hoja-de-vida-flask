@@ -16,16 +16,26 @@
                 Generar Reporte PDF
             </button>
             {% if current_user.rol.nombre == 'Jefa Salud' %}
-                {# Verificamos si estamos viendo la hoja de vida de un FUNCIONARIO (no un jefe directo) #}
+                {# Si el funcionario que vemos NO es nuestro reporte directo (es decir, es un funcionario nieto)... #}
                 {% if funcionario.jefe_directo_id != current_user.id %} 
-                    {# Solo si es un funcionario, mostramos Volver a Ver Equipo #}
-                    <a href="{{ url_for('ver_equipo_jefe', jefe_id=funcionario.jefe_directo_id) }}" class="btn btn-secondary">Volver a Ver Equipo</a> 
+                    {# ...mostramos "Volver a Ver Equipo" #}
+                    <a href="{{ url_for('ver_equipo_encargado', encargado_id=funcionario.jefe_directo_id) }}" class="btn btn-secondary">Volver a Ver Equipo</a>
                 {% endif %}
-                {# Siempre mostramos Volver al Panel Principal para la Jefa #}
+                {# Siempre mostramos "Volver al Panel Principal" #}
                 <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel Principal</a>
                 
-            {% elif current_user.rol.nombre == 'Jefe' %} 
-                <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Volver al Panel</a>
+            {% elif current_user.rol.nombre == 'Encargado de Recinto' %}
+                {# Misma lógica que Jefa Salud: Si el funcionario (Encargado de Unidad) NO es mi reporte directo (es un funcionario nieto)... #}
+                {% if funcionario.jefe_directo_id != current_user.id %}
+                    {# ...mostramos "Volver a Ver Equipo" (del Encargado de Unidad) #}
+                    <a href="{{ url_for('ver_equipo_encargado', encargado_id=funcionario.jefe_directo_id) }}" class="btn btn-secondary">Volver a Ver Equipo</a>
+                {% endif %}
+                 {# Siempre mostramos "Volver al Panel Principal" #}
+                <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Volver al Panel Principal</a>
+
+            {% elif current_user.rol.nombre == 'Encargado de Unidad' %} 
+                {# El Encargado de Unidad solo tiene un panel al que volver #}
+                <a href="{{ url_for('panel_encargado_unidad') }}" class="btn btn-secondary">Volver al Panel</a>
             {% endif %}
         </div>
     </div>

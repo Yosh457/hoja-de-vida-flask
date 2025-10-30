@@ -44,13 +44,23 @@ def jefa_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- DECORADOR DE ROL JEFE ---
-def jefe_required(f):
+# --- DECORADOR DE ROL ENCARGADO DE UNIDAD ---
+def encargado_unidad_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Permitimos el acceso si el usuario es Admin O Jefe.
-        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefa Salud', 'Jefe']):
-            abort(403) # Error 403: Forbidden
+        # Permite Admin, Jefa Salud, o Encargado de Unidad
+        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefa Salud', 'Encargado de Unidad']):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- DECORADOR DE ROL ENCARGADO DE RECINTO ---
+def encargado_recinto_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Permite Admin, Jefa Salud, o Encargado de Recinto
+        if not current_user.is_authenticated or (current_user.rol.nombre not in ['Admin', 'Jefa Salud', 'Encargado de Recinto']):
+            abort(403)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -61,6 +71,27 @@ def check_password_change(f):
             return redirect(url_for('cambiar_clave'))
         return f(*args, **kwargs)
     return decorated_function
+
+def es_superior_jerarquico(usuario_actual, funcionario_a_ver):
+    """
+    Verifica si el usuario_actual es superior jerárquico (directo o indirecto) 
+    del funcionario_a_ver.
+    """
+    # Si el funcionario a ver no tiene jefe, nadie puede ser su superior.
+    if not funcionario_a_ver.jefe_directo:
+        return False
+    
+    jefe_actual = funcionario_a_ver.jefe_directo
+    # Recorremos la cadena de mando hacia arriba
+    while jefe_actual:
+        # Si encontramos al usuario_actual en la cadena, es un superior.
+        if jefe_actual.id == usuario_actual.id:
+            return True
+        # Pasamos al siguiente jefe en la jerarquía
+        jefe_actual = jefe_actual.jefe_directo
+    
+    # Si llegamos al final sin encontrarlo, no es un superior.
+    return False
 
 def create_app():
     """Crea y configura la aplicación Flask."""
@@ -116,11 +147,13 @@ def create_app():
         if current_user.is_authenticated:
             if current_user.rol.nombre == 'Admin':
                 return redirect(url_for('admin_panel'))
-            elif current_user.rol.nombre == 'Jefa Salud': # ¡NUEVO!
-                return redirect(url_for('panel_jefa_salud')) # ¡NUEVO!
-            elif current_user.rol.nombre == 'Jefe':
-                return redirect(url_for('panel_jefe'))
-            else:
+            elif current_user.rol.nombre == 'Jefa Salud':
+                return redirect(url_for('panel_jefa_salud'))
+            elif current_user.rol.nombre == 'Encargado de Recinto': # <-- NUEVO
+                return redirect(url_for('panel_encargado_recinto'))
+            elif current_user.rol.nombre == 'Encargado de Unidad': # <-- RENOMBRADO
+                return redirect(url_for('panel_encargado_unidad'))
+            else: # Funcionario
                 return redirect(url_for('mi_hoja_de_vida'))
 
         if request.method == 'POST':
@@ -151,11 +184,13 @@ def create_app():
             # --- LÓGICA DE REDIRECCIÓN POR ROL ---
             if usuario.rol.nombre == 'Admin':
                 return redirect(url_for('admin_panel'))
-            elif usuario.rol.nombre == 'Jefa Salud': # ¡NUEVO!
-                return redirect(url_for('panel_jefa_salud')) # ¡NUEVO!
-            elif usuario.rol.nombre == 'Jefe':
-                return redirect(url_for('panel_jefe'))
-            else:
+            elif usuario.rol.nombre == 'Jefa Salud':
+                return redirect(url_for('panel_jefa_salud'))
+            elif usuario.rol.nombre == 'Encargado de Recinto': # <-- NUEVO
+                return redirect(url_for('panel_encargado_recinto'))
+            elif usuario.rol.nombre == 'Encargado de Unidad': # <-- RENOMBRADO
+                return redirect(url_for('panel_encargado_unidad'))
+            else: # Funcionario
                 return redirect(url_for('mi_hoja_de_vida'))
 
         # Si el método es GET, simplemente mostramos la página de login
@@ -193,7 +228,6 @@ def create_app():
 
         # Aplicamos los filtros dinámicamente
         if busqueda:
-            from sqlalchemy import or_
             query = query.filter(
                 or_(
                     Usuario.nombre_completo.ilike(f'%{busqueda}%'),
@@ -292,7 +326,11 @@ def create_app():
         calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
         categorias = Categoria.query.order_by(Categoria.nombre).all()
         jefes = Usuario.query.join(Usuario.rol).filter(
-            or_(Rol.nombre == 'Jefe', Rol.nombre == 'Jefa Salud')
+            or_(
+                Rol.nombre == 'Jefa Salud',
+                Rol.nombre == 'Encargado de Recinto',
+                Rol.nombre == 'Encargado de Unidad'
+            )
         ).order_by(Usuario.nombre_completo).all()
 
         return render_template('crear_usuario.html', 
@@ -341,7 +379,11 @@ def create_app():
         calidades = CalidadJuridica.query.order_by(CalidadJuridica.nombre).all()
         categorias = Categoria.query.order_by(Categoria.nombre).all()
         jefes = Usuario.query.join(Usuario.rol).filter(
-            or_(Rol.nombre == 'Jefe', Rol.nombre == 'Jefa Salud')
+            or_(
+                Rol.nombre == 'Jefa Salud',
+                Rol.nombre == 'Encargado de Recinto',
+                Rol.nombre == 'Encargado de Unidad'
+            )
         ).order_by(Usuario.nombre_completo).all()
 
         return render_template('editar_usuario.html', 
@@ -480,12 +522,44 @@ def create_app():
                             fecha_inicio=fecha_inicio_str,
                             fecha_fin=fecha_fin_str)
 
-    # --- RUTAS DEL PANEL DE JEFE ---
-    @app.route('/jefe/panel')
+    # --- RUTA NUEVA: PANEL ENCARGADO DE RECINTO ---
+    @app.route('/recinto/panel')
+    @login_required
+    @check_password_change
+    @encargado_recinto_required # Usamos el nuevo decorador
+    def panel_encargado_recinto():
+        page = request.args.get('page', 1, type=int)
+        busqueda = request.args.get('busqueda', '')
+
+        # Buscamos a los 'Encargado de Unidad' que reportan a este 'Encargado de Recinto'
+        query = Usuario.query.filter(
+            Usuario.jefe_directo_id == current_user.id,
+            Usuario.rol.has(nombre='Encargado de Unidad')
+        )
+
+        if busqueda:
+            query = query.filter(
+                or_(
+                    Usuario.nombre_completo.ilike(f'%{busqueda}%'),
+                    Usuario.rut.ilike(f'%{busqueda}%')
+                )
+            )
+
+        encargados_unidad = query.order_by(Usuario.nombre_completo).paginate(
+            page=page, per_page=10, error_out=False
+        )
+        
+        # Usaremos una plantilla nueva
+        return render_template('panel_encargado_recinto.html',
+                               pagination=encargados_unidad,
+                               busqueda=busqueda)
+    
+    # --- RUTAS DEL PANEL DE ENCARGADO DE UNIDAD ---
+    @app.route('/encargado_unidad/panel')
     @check_password_change
     @login_required
-    @jefe_required # Aplicamos nuestro nuevo decorador
-    def panel_jefe():
+    @encargado_unidad_required # Aplicamos nuestro nuevo decorador
+    def panel_encargado_unidad():
         page = request.args.get('page', 1, type=int)
         # Obtenemos el término de búsqueda del formulario
         busqueda = request.args.get('busqueda', '')
@@ -493,24 +567,66 @@ def create_app():
         # Empezamos con la consulta base: solo los subordinados del jefe actual
         query = Usuario.query.filter_by(jefe_directo_id=current_user.id)
         if busqueda:
-            from sqlalchemy import or_
             query = query.filter(
                 or_(
                     Usuario.nombre_completo.ilike(f'%{busqueda}%'),
                     Usuario.rut.ilike(f'%{busqueda}%')
                 )
             )
+        # Filtramos solo por rol "Funcionario"
+        query = query.filter(Usuario.rol.has(nombre='Funcionario'))
+
         pagination = query.order_by(Usuario.nombre_completo).paginate(
             page=page, per_page=10, error_out=False
         )
-        return render_template('panel_jefe.html', pagination=pagination, busqueda=busqueda)
+        return render_template('panel_encargado_unidad.html', 
+                               pagination=pagination, 
+                               busqueda=busqueda)
     
-    @app.route('/jefe/crear_anotacion/<int:funcionario_id>', methods=['GET', 'POST'])
+    @app.route('/crear_anotacion/<int:funcionario_id>', methods=['GET', 'POST'])
     @login_required
-    @jefe_required
+    @check_password_change 
+    # Quitamos el decorador @jefe_required
     def crear_anotacion(funcionario_id):
-        # Obtenemos los datos del funcionario que recibirá la anotación
         funcionario = Usuario.query.get_or_404(funcionario_id)
+
+        # --- NUEVA LÓGICA DE PERMISOS ---
+        puede_anotar = False
+        
+        # Regla 1: Jefa Salud anota a Encargado de Recinto o Encargado de Unidad
+        if (current_user.rol.nombre == 'Jefa Salud' and
+            funcionario.rol.nombre in ['Encargado de Recinto', 'Encargado de Unidad'] and
+            funcionario.jefe_directo_id == current_user.id):
+            puede_anotar = True
+
+        # Regla 2: Encargado de Recinto anota a Encargado de Unidad (¡NUEVA REGLA!)
+        elif (current_user.rol.nombre == 'Encargado de Recinto' and
+              funcionario.rol.nombre == 'Encargado de Unidad' and
+              funcionario.jefe_directo_id == current_user.id):
+            puede_anotar = True
+
+        # Regla 3: Encargado de Unidad anota a Funcionario
+        elif (current_user.rol.nombre == 'Encargado de Unidad' and
+              funcionario.rol.nombre == 'Funcionario' and
+              funcionario.jefe_directo_id == current_user.id):
+            puede_anotar = True
+            
+        # Regla 4: Admin siempre puede
+        elif current_user.rol.nombre == 'Admin':
+            puede_anotar = True
+
+        if not puede_anotar:
+            flash('No tienes permisos para crear anotaciones a este usuario.', 'danger')
+            # Redirigir al panel correspondiente
+            if current_user.rol.nombre == 'Jefa Salud':
+                return redirect(url_for('panel_jefa_salud'))
+            elif current_user.rol.nombre == 'Encargado de Recinto':
+                return redirect(url_for('panel_encargado_recinto'))
+            elif current_user.rol.nombre == 'Encargado de Unidad':
+                return redirect(url_for('panel_encargado_unidad'))
+            else:
+                return redirect(url_for('mi_hoja_de_vida'))
+        # --- FIN LÓGICA DE PERMISOS ---
 
         if request.method == 'POST':
             # Recolectamos los datos del formulario
@@ -549,11 +665,15 @@ def create_app():
 
             flash(f'Anotación creada con éxito para {funcionario.nombre_completo}.', 'success')
 
-            # --- Redirección Condicional por Rol ---
+            # --- Redirección Condicional por Rol Actualizada ---
             if current_user.rol.nombre == 'Jefa Salud':
                 return redirect(url_for('panel_jefa_salud'))
-            else: # Asume que es un Jefe normal
-                return redirect(url_for('panel_jefe'))
+            elif current_user.rol.nombre == 'Encargado de Recinto': # <-- AÑADIDO
+                return redirect(url_for('panel_encargado_recinto'))
+            elif current_user.rol.nombre == 'Encargado de Unidad':
+                return redirect(url_for('panel_encargado_unidad'))
+            else: 
+                return redirect(url_for('admin_panel')) # Fallback para Admin
             # --- Fin Redirección Condicional ---
             
         # Si es GET, cargamos los datos para los menús desplegables
@@ -565,26 +685,21 @@ def create_app():
                                factores=factores, 
                                subfactores=subfactores)
     
-    @app.route('/jefe/hoja_de_vida/<int:funcionario_id>')
+    @app.route('/hoja_de_vida/<int:funcionario_id>')
     @login_required
-    @jefe_required
+    @check_password_change
+    # Quitamos el decorador @jefe_required
     def ver_hoja_de_vida_funcionario(funcionario_id):
         page = request.args.get('page', 1, type=int)
         funcionario = Usuario.query.get_or_404(funcionario_id)
-        # --- Verificación de Permisos Mejorada ---
-        es_admin = (current_user.rol.nombre == 'Admin')
-        es_jefe_directo = (funcionario.jefe_directo_id == current_user.id)
         
-        # Verificamos si la Jefa de Salud es la jefa del jefe del funcionario
-        es_jefa_salud_del_jefe = False
-        if funcionario.jefe_directo: # Nos aseguramos de que el funcionario tenga un jefe
-            jefe_del_funcionario = funcionario.jefe_directo
-            # Verificamos si el usuario actual es la jefa de salud Y si es la jefa del jefe del funcionario
-            if current_user.rol.nombre == 'Jefa Salud' and jefe_del_funcionario.jefe_directo_id == current_user.id:
-                es_jefa_salud_del_jefe = True
+        # --- Nueva Verificación de Permisos ---
+        es_admin = (current_user.rol.nombre == 'Admin')
+        # Usamos nuestra nueva función de ayuda
+        es_superior = es_superior_jerarquico(current_user, funcionario)
 
-        # Permitir acceso si es Admin, el Jefe Directo, o la Jefa de Salud del Jefe Directo
-        if not (es_admin or es_jefe_directo or es_jefa_salud_del_jefe):
+        # Permitir acceso si es Admin O es un superior jerárquico
+        if not (es_admin or es_superior):
             abort(403)
         # --- Fin Verificación ---
 
@@ -655,15 +770,17 @@ def create_app():
         page = request.args.get('page', 1, type=int)
         busqueda = request.args.get('busqueda', '')
 
-        # Buscamos solo a los usuarios cuyo jefe directo sea la jefa actual
-        # Y que además tengan el rol de "Jefe"
+        # Buscamos a todos los que reportan a la Jefa de Salud
+        # Y que tengan CUALQUIERA de los dos roles de encargado
         query = Usuario.query.filter(
             Usuario.jefe_directo_id == current_user.id,
-            Usuario.rol.has(nombre='Jefe') # Filtramos solo por Jefes
+            Usuario.rol.has(or_(
+                Rol.nombre == 'Encargado de Recinto',
+                Rol.nombre == 'Encargado de Unidad'
+            ))
         )
 
         if busqueda:
-            from sqlalchemy import or_
             query = query.filter(
                 or_(
                     Usuario.nombre_completo.ilike(f'%{busqueda}%'),
@@ -671,59 +788,60 @@ def create_app():
                 )
             )
 
-        jefes_subordinados = query.order_by(Usuario.nombre_completo).paginate(
+        encargados = query.order_by(Usuario.nombre_completo).paginate(
             page=page, per_page=10, error_out=False
         )
 
         return render_template('panel_jefa_salud.html',
-                            pagination=jefes_subordinados,
+                            pagination=encargados,
                             busqueda=busqueda)
     
-    @app.route('/jefa/ver_equipo/<int:jefe_id>')
+    # Renombramos la ruta y la función
+    @app.route('/ver_equipo_encargado/<int:encargado_id>')
     @login_required
     @check_password_change
-    @jefa_required
-    def ver_equipo_jefe(jefe_id):
+    # El decorador @jefa_required ya no es correcto aquí, 
+    # quitamos el decorador y dejamos que la lógica interna decida.
+    def ver_equipo_encargado(encargado_id):
         page = request.args.get('page', 1, type=int)
 
-        # Obtenemos al jefe para mostrar su nombre
-        jefe = Usuario.query.get_or_404(jefe_id)
-        # Verificamos que este jefe realmente dependa de la jefa de salud actual (seguridad extra)
-        if jefe.jefe_directo_id != current_user.id and current_user.rol.nombre != 'Admin':
-            abort(403)
+        encargado = Usuario.query.get_or_404(encargado_id)
+        
+        # Verificación de permisos:
+        # Solo permite ver el equipo si eres el jefe directo de ese encargado O eres Admin
+        es_jefe_directo_del_encargado = (encargado.jefe_directo_id == current_user.id)
+        es_admin = (current_user.rol.nombre == 'Admin')
 
-        # Buscamos a los funcionarios cuyo jefe directo es el jefe_id
-        query = Usuario.query.filter_by(jefe_directo_id=jefe_id)
+        if not (es_jefe_directo_del_encargado or es_admin):
+            abort(403)
+            
+        # Buscamos a los funcionarios cuyo jefe directo es el 'encargado_id'
+        query = Usuario.query.filter_by(jefe_directo_id=encargado_id)
 
         funcionarios_equipo = query.order_by(Usuario.nombre_completo).paginate(
             page=page, per_page=10, error_out=False
         )
 
         return render_template('ver_equipo.html',
-                            jefe=jefe,
+                            # Renombramos la variable 'jefe' por 'encargado'
+                            encargado=encargado, 
                             pagination=funcionarios_equipo)
     
     @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
     def ver_anotacion(folio):
-        # Buscamos la anotación por su folio
         anotacion = Anotacion.query.get_or_404(folio)
 
-        # --- Medida de seguridad final ---
+        # --- Medida de seguridad simplificada ---
         funcionario_de_anotacion = anotacion.funcionario
-        jefe_que_creo_anotacion = anotacion.jefe # El jefe que creó esta anotación específica
 
         es_el_funcionario = (current_user.id == funcionario_de_anotacion.id)
-        es_el_jefe_directo_del_funcionario = (current_user.id == funcionario_de_anotacion.jefe_directo_id)
         es_admin = (current_user.rol.nombre == 'Admin')
-        
-        # Nueva condición: ¿Soy Jefa de Salud Y soy la jefa de quien creó la anotación?
-        es_jefa_salud_del_creador = False
-        if current_user.rol.nombre == 'Jefa Salud' and jefe_que_creo_anotacion and jefe_que_creo_anotacion.jefe_directo_id == current_user.id:
-            es_jefa_salud_del_creador = True
+        # Usamos nuestra función de ayuda
+        es_superior = es_superior_jerarquico(current_user, funcionario_de_anotacion)
 
-        # Permitir acceso si se cumple CUALQUIERA de las condiciones válidas
-        if not (es_el_funcionario or es_el_jefe_directo_del_funcionario or es_admin or es_jefa_salud_del_creador):
+        # Permitir acceso si es el funcionario, un admin, o CUALQUIER superior en la cadena de mando
+        if not (es_el_funcionario or es_admin or es_superior):
             abort(403)
         # --- Fin Medida de seguridad ---
 

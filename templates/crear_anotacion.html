@@ -45,9 +45,17 @@
         <div class="flex justify-end gap-4 pt-6 border-t mt-8">
             {% if current_user.rol.nombre == 'Jefa Salud' %}
                 <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Cancelar</a>
-            {% else %} {# Asume que es un Jefe normal #}
-                <a href="{{ url_for('panel_jefe') }}" class="btn btn-secondary">Cancelar</a>
+            
+            {% elif current_user.rol.nombre == 'Encargado de Recinto' %}
+                <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Cancelar</a>
+
+            {% elif current_user.rol.nombre == 'Encargado de Unidad' %}
+                <a href="{{ url_for('panel_encargado_unidad') }}" class="btn btn-secondary">Cancelar</a>
+            
+            {% else %} {# Fallback para Admin #}
+                <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">Cancelar</a>
             {% endif %}
+            
             <button type="submit" class="btn btn-primary">Crear Anotación</button>
         </div>
     </form>
