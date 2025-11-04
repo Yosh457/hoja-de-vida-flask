@@ -10,28 +10,42 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="absolute top-5 w-full max-w-lg mx-auto z-50 px-4">
-                {% for category, message in messages %}
-                    <div class="flash-message p-4 mb-4 text-sm rounded-lg shadow-lg
-                        {% if category == 'success' %} bg-green-100 text-green-800
-                        {% elif category == 'danger' %} bg-red-100 text-red-800
-                        {% else %} bg-yellow-100 text-yellow-800 {% endif %}"
-                        role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+<body class="flex flex-col min-h-screen bg-gray-100">
 
-    <div class="w-full">
-        {% block content %}{% endblock %}
-    </div>
+    {% if request.endpoint not in ['login', 'solicitar_reseteo', 'resetear_clave', 'cambiar_clave'] %}
+    <header class="w-full bg-white shadow-md p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <img src="{{ url_for('static', filename='Logo Red APS 2.png') }}" 
+                 alt="Logo Red de Atención Primaria" 
+                 class="h-20 w-auto"> <img src="{{ url_for('static', filename='logoMaho.png') }}" 
+                 alt="Logo Municipalidad Alto Hospicio" 
+                 class="h-20 w-auto"> </div>
+    </header>
+    {% endif %}
+    <main class="w-full flex-grow">
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="absolute top-5 w-full max-w-lg mx-auto z-50 px-4 left-0 right-0">
+                    {% for category, message in messages %}
+                        <div class="flash-message p-4 mb-4 text-sm rounded-lg shadow-lg
+                            {% if category == 'success' %} bg-green-100 text-green-800
+                            {% elif category == 'danger' %} bg-red-100 text-red-800
+                            {% else %} bg-yellow-100 text-yellow-800 {% endif %}"
+                            role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="w-full">
+            {% block content %}{% endblock %}
+        </div>
+
+    </main>
     <div id="inactivity-modal" class="fixed inset-0 z-50 items-center justify-center hidden flex" style="background-color: rgba(0, 0, 0, 0.6);">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 m-4 text-center">
             <h3 class="text-lg font-bold text-yellow-600 mb-2">Tu sesión está a punto de expirar</h3>
@@ -57,7 +71,7 @@
                         <label for="report_factor_filtro" class="block text-sm font-medium text-gray-700">Filtrar por Factor:</label>
                         <select name="factor" id="report_factor_filtro" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
                             <option value="">Todos</option>
-                            </select>
+                        </select>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -77,6 +91,11 @@
             </form>
         </div>
     </div>
+    <footer class="w-full text-white text-center p-4" style="background-color: #275c80;">
+        <p class="text-sm">
+            Desarrollado por la Unidad de Tics del Departamento de Salud de la Municipalidad de Alto Hospicio
+        </p>
+    </footer>
     <script src="{{ url_for('static', filename='flash_messages.js') }}"></script>
     <script src="{{ url_for('static', filename='report_modal.js') }}"></script>
 </body>
