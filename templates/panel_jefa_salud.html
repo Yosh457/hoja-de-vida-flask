@@ -39,8 +39,8 @@
                     <td class="py-3 px-4">{{ encargado.rol.nombre }}</td>
                     <td class="py-3 px-4">{{ encargado.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center flex justify-center gap-2"> {# Usamos flex y gap #}
-                        <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=encargado.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
-                        <a href="{{ url_for('crear_anotacion', funcionario_id=encargado.id) }}" class="btn btn-primary">Crear Anotación</a>
+                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=encargado.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
+                        <a href="{{ url_for('crear_comentario', funcionario_id=encargado.id) }}" class="btn btn-primary">Crear Comentario</a>
                         <a href="{{ url_for('ver_equipo_encargado', encargado_id=encargado.id) }}" class="btn btn-secondary">Ver Unidad</a>
                     </td>
                 </tr>

@@ -10,7 +10,7 @@
             <p class="text-gray-500">Bienvenida, {{ current_user.nombre_completo }}</p>
         </div>
         <div>
-            <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Ver Mi Hoja de Vida</a>
+            <a href="{{ url_for('mi_libro_novedades') }}" class="btn btn-secondary">Ver Mi Libro de Novedades</a>
             <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
@@ -38,8 +38,8 @@
                     <td class="py-3 px-4">{{ encargado.rut }}</td>
                     <td class="py-3 px-4">{{ encargado.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center flex justify-center gap-2"> {# Usamos flex y gap #}
-                        <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=encargado.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
-                        <a href="{{ url_for('crear_anotacion', funcionario_id=encargado.id) }}" class="btn btn-primary">Crear Anotación</a>
+                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=encargado.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
+                        <a href="{{ url_for('crear_comentario', funcionario_id=encargado.id) }}" class="btn btn-primary">Crear Comentario</a>
                         <a href="{{ url_for('ver_equipo_encargado', encargado_id=encargado.id) }}" class="btn btn-secondary">Ver Unidad</a>
                     </td>
                 </tr>

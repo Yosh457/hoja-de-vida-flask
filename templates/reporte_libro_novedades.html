@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte Hoja de Vida - {{ funcionario.nombre_completo }}</title>
+    <title>Reporte Libro de Novedades - {{ funcionario.nombre_completo }}</title>
     <style>
         /* Estilos básicos para el documento PDF */
         @page {
@@ -29,7 +29,7 @@
             padding: 15px;
             border-radius: 5px;
         }
-        .anotacion {
+        .comentario {
             margin-top: 25px;
             /* Evita que una tabla se divida entre dos páginas si es posible */
             page-break-inside: avoid;
@@ -76,45 +76,45 @@
         {% endif %}
     </div>
 
-    {% for anotacion in anotaciones %}
-        <div class="anotacion">
+    {% for comentario in comentarios %}
+        <div class="comentario">
             <table>
                 <thead>
                     <tr>
-                        <th colspan="2" style="background-color: #34495e; color: white;">Folio #{{ anotacion.folio }} - Fecha: {{ anotacion.fecha_creacion.strftime('%d/%m/%Y') }}</th>
+                        <th colspan="2" style="background-color: #34495e; color: white;">Folio #{{ comentario.folio }} - Fecha: {{ comentario.fecha_creacion.strftime('%d/%m/%Y') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <th>Tipo de Anotación</th>
-                        <td class="{% if anotacion.tipo == 'Favorable' %}favorable{% else %}desfavorable{% endif %}">
-                            {{ anotacion.tipo }}
+                        <th>Tipo de Comentario</th>
+                        <td class="{% if comentario.tipo == 'Favorable' %}favorable{% else %}desfavorable{% endif %}">
+                            {{ comentario.tipo }}
                         </td>
                     </tr>
                     <tr>
                         <th>Factor / Sub-Factor</th>
-                        <td>{{ anotacion.subfactor.factor.nombre }} / {{ anotacion.subfactor.nombre }}</td>
+                        <td>{{ comentario.subfactor.factor.nombre }} / {{ comentario.subfactor.nombre }}</td>
                     </tr>
                     <tr>
                         <th>Creada por (Jefatura)</th>
-                        <td>{{ anotacion.jefe.nombre_completo }}</td>
+                        <td>{{ comentario.jefe.nombre_completo }}</td>
                     </tr>
                     <tr>
                         <th>Estado</th>
-                        <td>{{ anotacion.estado }}</td>
+                        <td>{{ comentario.estado }}</td>
                     </tr>
                     <tr>
                         <th>Motivo (Jefatura)</th>
-                        <td>{{ anotacion.motivo_jefe }}</td>
+                        <td>{{ comentario.motivo_jefe }}</td>
                     </tr>
                     <tr>
                         <th>Observaciones (Funcionario)</th>
-                        <td>{{ anotacion.observacion_funcionario or 'Sin respuesta.' }}</td>
+                        <td>{{ comentario.observacion_funcionario or 'Sin respuesta.' }}</td>
                     </tr>
-                    {% if anotacion.fecha_aceptacion %}
+                    {% if comentario.fecha_aceptacion %}
                     <tr>
                         <th>Fecha Aceptación</th>
-                        <td>{{ anotacion.fecha_aceptacion.strftime('%d/%m/%Y a las %H:%M:%S') }}</td>
+                        <td>{{ comentario.fecha_aceptacion.strftime('%d/%m/%Y a las %H:%M:%S') }}</td>
                     </tr>
                     {% endif %}
                 </tbody>
@@ -122,8 +122,8 @@
         </div>
     {% endfor %}
 
-    {% if not anotaciones %}
-        <p>El funcionario no tiene anotaciones registradas a la fecha.</p>
+    {% if not comentarios %}
+        <p>El funcionario no tiene comentarios registrados a la fecha.</p>
     {% endif %}
 </body>
 </html>

@@ -37,7 +37,7 @@
                     <td class="py-3 px-4">{{ funcionario.rut }}</td>
                     <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center">
-                        <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
+                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
                     </td>
                 </tr>
                 {% else %}

@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Hoja de Vida de {{ funcionario.nombre_completo }}{% endblock %}
+{% block title %}Libro de Novedades de {{ funcionario.nombre_completo }}{% endblock %}
 {% from '_macros.html' import render_pagination %}
 
 {% block content %}
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-7xl mx-auto my-12">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-gray-800">Hoja de Vida de: <span class="text-blue-600">{{ funcionario.nombre_completo }}</span></h2>
+            <h2 class="text-2xl font-bold text-gray-800">Libro de Novedades de: <span class="text-blue-600">{{ funcionario.nombre_completo }}</span></h2>
             <p class="text-gray-500">{{ funcionario.rol.nombre }} en {{ funcionario.unidad.nombre }}</p>
         </div>
         <div class="flex items-center gap-4">
             <button class="btn btn-primary open-report-modal"
-                    data-pdf-url="{{ url_for('generar_pdf', funcionario_id=current_user.id if 'mi_hoja_de_vida' in request.endpoint else funcionario.id) }}"
+                    data-pdf-url="{{ url_for('generar_pdf', funcionario_id=current_user.id if 'mi_libro_novedades' in request.endpoint else funcionario.id) }}"
                     data-factores='{{ factores_para_filtro|tojson|safe }}'>
                 Generar Reporte PDF
             </button>
@@ -41,8 +41,8 @@
     </div>
 
     <div class="mb-10">
-        <h3 class="text-xl font-semibold text-gray-700 mb-4">Anotaciones Pendientes de Respuesta</h3>
-        {% if anotaciones_pendientes %}
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Comentarios Pendientes de Respuesta</h3>
+        {% if comentarios_pendientes %}
             <table class="min-w-full bg-white">
                 <thead class="bg-gray-100">
                     <tr>
@@ -54,16 +54,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for anotacion in anotaciones_pendientes %}
+                    {% for comentario in comentarios_pendientes %}
                     <tr class="border-b bg-yellow-50 hover:bg-yellow-100">
-                        <td class="py-3 px-4">{{ anotacion.folio }}</td>
-                        <td class="py-3 px-4">{{ anotacion.fecha_creacion.strftime('%d-%m-%Y') }}</td>
+                        <td class="py-3 px-4">{{ comentario.folio }}</td>
+                        <td class="py-3 px-4">{{ comentario.fecha_creacion.strftime('%d-%m-%Y') }}</td>
                         <td class="py-3 px-4">
-                            {% if anotacion.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ anotacion.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ anotacion.tipo }}</span>{% endif %}
+                            {% if comentario.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ comentario.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ comentario.tipo }}</span>{% endif %}
                         </td>
-                        <td class="py-3 px-4">{{ anotacion.jefe.nombre_completo }}</td>
+                        <td class="py-3 px-4">{{ comentario.jefe.nombre_completo }}</td>
                         <td class="py-3 px-4 text-center">
-                            <a href="{{ url_for('ver_anotacion', folio=anotacion.folio) }}" class="btn btn-secondary">Ver Detalle</a>
+                            <a href="{{ url_for('ver_comentario', folio=comentario.folio) }}" class="btn btn-secondary">Ver Detalle</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -71,12 +71,12 @@
             </table>
         {% else %}
             <div class="bg-gray-50 p-6 rounded-lg text-center">
-                <p class="text-gray-600">Este funcionario no tiene anotaciones pendientes de respuesta.</p>
+                <p class="text-gray-600">Este funcionario no tiene comentarios pendientes de respuesta.</p>
             </div>
         {% endif %}
     </div>
     <div>
-        <h3 class="text-xl font-semibold text-gray-700 mb-4">Historial de Anotaciones</h3>
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Historial de Comentarios</h3>
         <div id="filter-data" 
             data-subfactores='{{ subfactores_para_filtro|tojson }}' 
             data-selected-subfactor="{{ subfactor_filtro }}">
@@ -133,30 +133,30 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for anotacion in historial_pagination.items %}
+                    {% for comentario in historial_pagination.items %}
                     <tr class="border-b hover:bg-gray-50">
-                        <td class="py-3 px-4">{{ anotacion.folio }}</td>
-                        <td class="py-3 px-4">{{ anotacion.fecha_creacion.strftime('%d-%m-%Y') }}</td>
+                        <td class="py-3 px-4">{{ comentario.folio }}</td>
+                        <td class="py-3 px-4">{{ comentario.fecha_creacion.strftime('%d-%m-%Y') }}</td>
                         <td class="py-3 px-4">
-                            {% if anotacion.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ anotacion.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ anotacion.tipo }}</span>{% endif %}
+                            {% if comentario.tipo == 'Favorable' %}<span class="text-green-600 font-semibold">{{ comentario.tipo }}</span>{% else %}<span class="text-red-600 font-semibold">{{ comentario.tipo }}</span>{% endif %}
                         </td>
-                        <td class="py-3 px-4">{{ anotacion.subfactor.factor.nombre }}</td>
-                        <td class="py-3 px-4">{{ anotacion.subfactor.nombre }}</td>
-                        <td class="py-3 px-4">{{ anotacion.jefe.nombre_completo }}</td>
+                        <td class="py-3 px-4">{{ comentario.subfactor.factor.nombre }}</td>
+                        <td class="py-3 px-4">{{ comentario.subfactor.nombre }}</td>
+                        <td class="py-3 px-4">{{ comentario.jefe.nombre_completo }}</td>
                         <td class="py-3 px-4 text-center">
                             <span class="bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Aceptada</span>
                         </td>
                         <td class="py-3 px-4 text-center">
-                            <a href="{{ url_for('ver_anotacion', folio=anotacion.folio) }}" class="btn btn-secondary">Ver Detalle</a>
+                            <a href="{{ url_for('ver_comentario', folio=comentario.folio) }}" class="btn btn-secondary">Ver Detalle</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            {{ render_pagination(historial_pagination, 'ver_hoja_de_vida_funcionario', extra_args={'funcionario_id': funcionario.id}) }}
+            {{ render_pagination(historial_pagination, 'ver_libro_novedades_funcionario', extra_args={'funcionario_id': funcionario.id}) }}
         {% else %}
             <div class="bg-gray-50 p-6 rounded-lg text-center">
-                <p class="text-gray-600">Este funcionario no tiene un historial de anotaciones.</p>
+                <p class="text-gray-600">Este funcionario no tiene un historial de comentarios.</p>
             </div>
         {% endif %}
     </div>

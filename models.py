@@ -61,7 +61,7 @@ class SubFactor(db.Model):
     factor_id = db.Column(db.Integer, db.ForeignKey('Factores.id'))
     # Relación para acceder al factor padre desde un subfactor. ej: mi_subfactor.factor
     factor = db.relationship('Factor', back_populates='subfactores')
-    anotaciones = db.relationship('Anotacion', back_populates='subfactor')
+    comentarios = db.relationship('Comentario', back_populates='subfactor')
 
 # --- MODELOS PRINCIPALES ---
 
@@ -106,8 +106,8 @@ class Usuario(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-class Anotacion(db.Model):
-    __tablename__ = 'Anotaciones'
+class Comentario(db.Model):
+    __tablename__ = 'Comentarios' # Coincide con el ALTER TABLE
     folio = db.Column(db.Integer, primary_key=True)
     tipo = db.Column(db.Enum('Favorable', 'Desfavorable'), nullable=False)
     motivo_jefe = db.Column(db.Text, nullable=False)
@@ -122,11 +122,11 @@ class Anotacion(db.Model):
     subfactor_id = db.Column(db.Integer, db.ForeignKey('SubFactores.id'), nullable=False)
 
     # Relaciones
-    subfactor = db.relationship('SubFactor', back_populates='anotaciones')
+    subfactor = db.relationship('SubFactor', back_populates='comentarios')
     
     # Como hay dos relaciones a la misma tabla (Usuarios), debemos ser explícitos.
-    funcionario = db.relationship('Usuario', foreign_keys=[funcionario_id], backref='anotaciones_recibidas')
-    jefe = db.relationship('Usuario', foreign_keys=[jefe_id], backref='anotaciones_emitidas')
+    funcionario = db.relationship('Usuario', foreign_keys=[funcionario_id], backref='comentarios_recibidos')
+    jefe = db.relationship('Usuario', foreign_keys=[jefe_id], backref='comentarios_emitidos')
 
 class Log(db.Model):
     __tablename__ = 'logs'

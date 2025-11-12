@@ -8,7 +8,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 # Importamos las extensiones y los modelos que usaremos
-from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Anotacion, Factor, SubFactor, Log
+from models import db, Usuario, Rol, Establecimiento, Unidad, CalidadJuridica, Categoria, Comentario, Factor, SubFactor, Log
 from datetime import date, datetime, timedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -93,6 +93,97 @@ def es_superior_jerarquico(usuario_actual, funcionario_a_ver):
     # Si llegamos al final sin encontrarlo, no es un superior.
     return False
 
+def enviar_correo_reseteo(usuario, token):
+    remitente = os.getenv("EMAIL_USUARIO")
+    contrasena = os.getenv("EMAIL_CONTRASENA")
+
+    if not remitente or not contrasena:
+        print("ERROR: Asegúrate de que EMAIL_USUARIO y EMAIL_CONTRASENA están en tu archivo .env")
+        return
+
+    msg = MIMEMultipart()
+    msg['Subject'] = 'Restablecimiento de Contraseña - Sistema Libro de Novedades'
+    msg['From'] = f"Sistema Libro de Novedades <{remitente}>"
+    msg['To'] = usuario.email # Adaptado a nuestro objeto Usuario
+
+    url_reseteo = url_for('resetear_clave', token=token, _external=True)
+    cuerpo_html = f"""
+    <p>Hola {usuario.nombre_completo},</p>
+    <p>Hemos recibido una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+    <p><a href="{url_reseteo}" style="padding: 10px 15px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Restablecer mi contraseña</a></p>
+    <p>Si no solicitaste esto, puedes ignorar este correo.</p>
+    <p>El enlace expirará en 1 hora.</p>
+    """
+    msg.attach(MIMEText(cuerpo_html, 'html'))
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(remitente, contrasena)
+            server.send_message(msg)
+            print(f"Correo de reseteo enviado exitosamente a {usuario.email}")
+    except Exception as e:
+        print(f"Error al enviar correo de reseteo: {e}")
+
+def enviar_correo_notificacion_comentario(comentario):
+    """Envía un correo al funcionario notificándole de un nuevo comentario."""
+    remitente = os.getenv("EMAIL_USUARIO")
+    contrasena = os.getenv("EMAIL_CONTRASENA")
+    
+    if not remitente or not contrasena:
+        print("ERROR: Credenciales de correo no configuradas en .env")
+        return
+
+    # Obtenemos los datos del destinatario y del emisor desde el objeto comentario
+    funcionario = comentario.funcionario
+    jefe = comentario.jefe
+
+    msg = MIMEMultipart()
+    msg['Subject'] = f"Nuevo Comentario en tu Libro de Novedades - Folio #{comentario.folio}"
+    msg['From'] = f"Sistema Libro de Novedades <{remitente}>"
+    msg['To'] = funcionario.email
+    
+    # URL a la página de login
+    url_sistema = url_for('login', _external=True)
+
+    cuerpo_html = f"""
+    <p>Hola {funcionario.nombre_completo},</p>
+    <p>Has recibido un nuevo comentario de tipo <strong>{comentario.tipo}</strong> en tu Libro de Novedades, creada por <strong>{jefe.nombre_completo}</strong>.</p>
+    <p>Para revisar los detalles, por favor ingresa al sistema:</p>
+    <p><a href="{url_sistema}" style="padding: 10px 15px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Ingresar al Sistema</a></p>
+    <p>Este es un correo generado automáticamente, por favor no respondas a esta dirección.</p>
+    """
+    msg.attach(MIMEText(cuerpo_html, 'html'))
+    
+    try:
+        # Usamos 'with' para asegurar que la conexión se cierre correctamente
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(remitente, contrasena)
+            server.send_message(msg)
+            print(f"Correo de notificación enviado exitosamente a {funcionario.email}")
+    except Exception as e:
+        print(f"Error al enviar correo de notificación: {e}")
+
+def registrar_log(accion, detalles=""):
+    """
+    Crea y añade un nuevo registro de log a la sesión de la base de datos.
+    Nota: No hace commit aquí; el commit se debe hacer en la ruta principal.
+    """
+    # Intentamos obtener el usuario actual. Si no hay nadie logueado (ej: script), ponemos None.
+    user_id = current_user.id if current_user.is_authenticated else None
+    user_name = current_user.nombre_completo if current_user.is_authenticated else "Sistema"
+
+    nuevo_log = Log(
+        usuario_id=user_id,
+        usuario_nombre=user_name,
+        accion=accion,
+        detalles=detalles
+    )
+    db.session.add(nuevo_log)
+    # El db.session.commit() se hará en la ruta que llama a esta función.
+# --- FIN FUNCIONES AUXILIARES ---
+
 def create_app():
     """Crea y configura la aplicación Flask."""
     # Inicializamos la aplicación Flask
@@ -137,7 +228,6 @@ def create_app():
     @app.route('/')
     def index():
         # Redirigimos a la página de login por defecto
-        from flask import redirect, url_for
         return redirect(url_for('login'))
     
     # --- RUTAS DE AUTENTICACIÓN ---
@@ -154,7 +244,7 @@ def create_app():
             elif current_user.rol.nombre == 'Encargado de Unidad': # <-- RENOMBRADO
                 return redirect(url_for('panel_encargado_unidad'))
             else: # Funcionario
-                return redirect(url_for('mi_hoja_de_vida'))
+                return redirect(url_for('mi_libro_novedades'))
 
         if request.method == 'POST':
             email = request.form.get('email')
@@ -191,7 +281,7 @@ def create_app():
             elif usuario.rol.nombre == 'Encargado de Unidad': # <-- RENOMBRADO
                 return redirect(url_for('panel_encargado_unidad'))
             else: # Funcionario
-                return redirect(url_for('mi_hoja_de_vida'))
+                return redirect(url_for('mi_libro_novedades'))
 
         # Si el método es GET, simplemente mostramos la página de login
         return render_template('login.html')
@@ -340,6 +430,7 @@ def create_app():
                                jefes=jefes,
                                calidades=calidades, 
                                categorias=categorias)
+    
     @app.route('/admin/editar_usuario/<int:id>', methods=['GET', 'POST'])
     @login_required
     @admin_required
@@ -460,13 +551,13 @@ def create_app():
                             filtros=filtros_actuales)
 
     # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---
-    @app.route('/hoja_de_vida')
+    @app.route('/libro_novedades')
     @login_required
     @check_password_change
-    def mi_hoja_de_vida():
+    def mi_libro_novedades():
         page = request.args.get('page', 1, type=int)
         
-        # --- Lógica de Filtros para Anotaciones ---
+        # --- Lógica de Filtros para Comentarios ---
         tipo_filtro = request.args.get('tipo_filtro', '')
         factor_filtro = request.args.get('factor_filtro', '')
         subfactor_filtro = request.args.get('subfactor_filtro', '')
@@ -474,36 +565,36 @@ def create_app():
         fecha_fin_str = request.args.get('fecha_fin', '')
 
         # Consulta base
-        query = Anotacion.query.filter_by(funcionario_id=current_user.id)
+        query = Comentario.query.filter_by(funcionario_id=current_user.id)
 
         # Filtros generales (se aplican a pendientes y historial)
         if tipo_filtro:
-            query = query.filter(Anotacion.tipo == tipo_filtro)
+            query = query.filter(Comentario.tipo == tipo_filtro)
         if factor_filtro:
-            query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+            query = query.join(Comentario.subfactor).filter(SubFactor.factor_id == factor_filtro)
         if subfactor_filtro:
-            query = query.filter(Anotacion.subfactor_id == subfactor_filtro)
+            query = query.filter(Comentario.subfactor_id == subfactor_filtro)
         
         # Separamos pendientes (sin paginación, siempre visibles)
-        anotaciones_pendientes = query.filter(Anotacion.estado == 'Pendiente').order_by(Anotacion.folio.desc()).all()
+        comentarios_pendientes = query.filter(Comentario.estado == 'Pendiente').order_by(Comentario.folio.desc()).all()
 
         # Consulta específica para el historial paginado
-        historial_query = query.filter(Anotacion.estado == 'Aceptada')
+        historial_query = query.filter(Comentario.estado == 'Aceptada')
         
         # Aplicar filtros de fecha SOLO al historial
         try:
             if fecha_inicio_str:
                 fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
-                historial_query = historial_query.filter(Anotacion.fecha_creacion >= fecha_inicio)
+                historial_query = historial_query.filter(Comentario.fecha_creacion >= fecha_inicio)
             if fecha_fin_str:
                 fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
-                historial_query = historial_query.filter(Anotacion.fecha_creacion <= fecha_fin)
+                historial_query = historial_query.filter(Comentario.fecha_creacion <= fecha_fin)
         except ValueError:
             flash("Formato de fecha inválido. Por favor, usa YYYY-MM-DD.", "danger")
             return redirect(request.path) 
 
         # Paginamos el historial ya filtrado
-        historial_pagination = historial_query.order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
+        historial_pagination = historial_query.order_by(Comentario.fecha_creacion.desc(), Comentario.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
         
@@ -511,8 +602,8 @@ def create_app():
         factores_para_filtro = [{'id': f.id, 'nombre': f.nombre} for f in Factor.query.order_by(Factor.nombre).all()]
         subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
 
-        return render_template('mi_hoja_de_vida.html', 
-                            anotaciones_pendientes=anotaciones_pendientes,
+        return render_template('mi_libro_novedades.html', 
+                            comentarios_pendientes=comentarios_pendientes,
                             historial_pagination=historial_pagination,
                             factores_para_filtro=factores_para_filtro,
                             subfactores_para_filtro=subfactores_para_filtro,
@@ -583,11 +674,11 @@ def create_app():
                                pagination=pagination, 
                                busqueda=busqueda)
     
-    @app.route('/crear_anotacion/<int:funcionario_id>', methods=['GET', 'POST'])
+    @app.route('/crear_comentario/<int:funcionario_id>', methods=['GET', 'POST'])
     @login_required
     @check_password_change 
     # Quitamos el decorador @jefe_required
-    def crear_anotacion(funcionario_id):
+    def crear_comentario(funcionario_id):
         funcionario = Usuario.query.get_or_404(funcionario_id)
 
         # --- NUEVA LÓGICA DE PERMISOS ---
@@ -616,7 +707,7 @@ def create_app():
             puede_anotar = True
 
         if not puede_anotar:
-            flash('No tienes permisos para crear anotaciones a este usuario.', 'danger')
+            flash('No tienes permisos para crear comentarios a este usuario.', 'danger')
             # Redirigir al panel correspondiente
             if current_user.rol.nombre == 'Jefa Salud':
                 return redirect(url_for('panel_jefa_salud'))
@@ -625,7 +716,7 @@ def create_app():
             elif current_user.rol.nombre == 'Encargado de Unidad':
                 return redirect(url_for('panel_encargado_unidad'))
             else:
-                return redirect(url_for('mi_hoja_de_vida'))
+                return redirect(url_for('mi_libro_novedades'))
         # --- FIN LÓGICA DE PERMISOS ---
 
         if request.method == 'POST':
@@ -634,8 +725,8 @@ def create_app():
             subfactor_id = request.form.get('subfactor_id')
             motivo = request.form.get('motivo_jefe')
 
-            # Creamos la nueva anotación
-            nueva_anotacion = Anotacion(
+            # Creamos el nuevo comentario
+            nuevo_comentario = Comentario(
                 tipo=tipo,
                 motivo_jefe=motivo,
                 fecha_creacion=date.today(), # Usamos la fecha actual
@@ -645,25 +736,24 @@ def create_app():
             )
 
             # Guardamos en la base de datos
-            db.session.add(nueva_anotacion)
+            db.session.add(nuevo_comentario)
             # Flush para obtener el folio asignado antes del commit final
             db.session.flush()
 
             # --- ¡REGISTRAR LOG! ---
-            detalles_log = (f"Jefe {current_user.nombre_completo} (ID: {current_user.id}) creó anotación "
-                        f"{nueva_anotacion.tipo} (Folio: {nueva_anotacion.folio}) para "
+            detalles_log = (f"Jefe {current_user.nombre_completo} (ID: {current_user.id}) creó comentario "
+                        f"{nuevo_comentario.tipo} (Folio: {nuevo_comentario.folio}) para "
                         f"{funcionario.nombre_completo} (ID: {funcionario.id}). "
-                        f"Factor: {nueva_anotacion.subfactor.factor.nombre}, "
-                        f"SubFactor: {nueva_anotacion.subfactor.nombre}.")
-            registrar_log(accion="Creación de Anotación", detalles=detalles_log)
+                        f"Factor: {nuevo_comentario.subfactor.factor.nombre}, "
+                        f"SubFactor: {nuevo_comentario.subfactor.nombre}.")
+            registrar_log(accion="Creación de Comentario", detalles=detalles_log)
             # ------------------------
-            # Guardamos la anotación y el log juntos
+            # Guardamos el comentario y el log juntos
             db.session.commit()
 
             # --- Enviamos el correo de notificación ---
-            enviar_correo_notificacion_anotacion(nueva_anotacion)
-
-            flash(f'Anotación creada con éxito para {funcionario.nombre_completo}.', 'success')
+            enviar_correo_notificacion_comentario(nuevo_comentario)
+            flash(f'Comentario creado con éxito para {funcionario.nombre_completo}.', 'success')
 
             # --- Redirección Condicional por Rol Actualizada ---
             if current_user.rol.nombre == 'Jefa Salud':
@@ -680,16 +770,16 @@ def create_app():
         factores = Factor.query.order_by(Factor.id).all()
         subfactores = SubFactor.query.order_by(SubFactor.id).all()
 
-        return render_template('crear_anotacion.html', 
+        return render_template('crear_comentario.html', 
                                funcionario=funcionario, 
                                factores=factores, 
                                subfactores=subfactores)
     
-    @app.route('/hoja_de_vida/<int:funcionario_id>')
+    @app.route('/libro_novedades/<int:funcionario_id>')
     @login_required
     @check_password_change
     # Quitamos el decorador @jefe_required
-    def ver_hoja_de_vida_funcionario(funcionario_id):
+    def ver_libro_novedades_funcionario(funcionario_id):
         page = request.args.get('page', 1, type=int)
         funcionario = Usuario.query.get_or_404(funcionario_id)
         
@@ -703,7 +793,7 @@ def create_app():
             abort(403)
         # --- Fin Verificación ---
 
-        # --- Lógica de Filtros para Anotaciones ---
+        # --- Lógica de Filtros para Comentarios ---
         tipo_filtro = request.args.get('tipo_filtro', '')
         factor_filtro = request.args.get('factor_filtro', '')
         subfactor_filtro = request.args.get('subfactor_filtro', '')
@@ -711,36 +801,35 @@ def create_app():
         fecha_fin_str = request.args.get('fecha_fin', '')
         
         # Consulta base
-        query = Anotacion.query.filter_by(funcionario_id=funcionario.id)
+        query = Comentario.query.filter_by(funcionario_id=funcionario.id)
         
         # Filtros generales
         if tipo_filtro:
-            query = query.filter(Anotacion.tipo == tipo_filtro)
+            query = query.filter(Comentario.tipo == tipo_filtro)
         if factor_filtro:
-            query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+            query = query.join(Comentario.subfactor).filter(SubFactor.factor_id == factor_filtro)
         if subfactor_filtro:
-            query = query.filter(Anotacion.subfactor_id == subfactor_filtro)
-
+            query = query.filter(Comentario.subfactor_id == subfactor_filtro)
         # Separamos pendientes
-        anotaciones_pendientes = query.filter(Anotacion.estado == 'Pendiente').order_by(Anotacion.folio.desc()).all()
+        comentarios_pendientes = query.filter(Comentario.estado == 'Pendiente').order_by(Comentario.folio.desc()).all()
 
         # Consulta específica para historial
-        historial_query = query.filter(Anotacion.estado == 'Aceptada')
+        historial_query = query.filter(Comentario.estado == 'Aceptada')
 
         # Aplicar filtros de fecha SOLO al historial
         try:
             if fecha_inicio_str:
                 fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
-                historial_query = historial_query.filter(Anotacion.fecha_creacion >= fecha_inicio)
+                historial_query = historial_query.filter(Comentario.fecha_creacion >= fecha_inicio)
             if fecha_fin_str:
                 fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
-                historial_query = historial_query.filter(Anotacion.fecha_creacion <= fecha_fin)
+                historial_query = historial_query.filter(Comentario.fecha_creacion <= fecha_fin)
         except ValueError:
             flash("Formato de fecha inválido. Por favor, usa YYYY-MM-DD.", "danger")
             return redirect(request.path) 
 
         # Paginamos historial
-        historial_pagination = historial_query.order_by(Anotacion.fecha_creacion.desc(), Anotacion.folio.desc()).paginate(
+        historial_pagination = historial_query.order_by(Comentario.fecha_creacion.desc(), Comentario.folio.desc()).paginate(
             page=page, per_page=5, error_out=False
         )
         
@@ -748,9 +837,9 @@ def create_app():
         factores_para_filtro = [{'id': f.id, 'nombre': f.nombre} for f in Factor.query.order_by(Factor.nombre).all()]
         subfactores_para_filtro = [{'id': sf.id, 'nombre': sf.nombre, 'factor_id': sf.factor_id} for sf in SubFactor.query.all()]
         
-        return render_template('hoja_de_vida_funcionario.html', 
+        return render_template('libro_novedades_funcionario.html', 
                             funcionario=funcionario, 
-                            anotaciones_pendientes=anotaciones_pendientes,
+                            comentarios_pendientes=comentarios_pendientes,
                             historial_pagination=historial_pagination,
                             factores_para_filtro=factores_para_filtro,
                             subfactores_para_filtro=subfactores_para_filtro,
@@ -759,7 +848,6 @@ def create_app():
                             subfactor_filtro=subfactor_filtro,
                             fecha_inicio=fecha_inicio_str,
                             fecha_fin=fecha_fin_str)
-    # app.py (dentro de create_app)
 
     # --- RUTAS DEL PANEL JEFA DE SALUD ---
     @app.route('/jefa/panel')
@@ -827,18 +915,18 @@ def create_app():
                             encargado=encargado, 
                             pagination=funcionarios_equipo)
     
-    @app.route('/anotacion/ver/<int:folio>', methods=['GET', 'POST'])
+    @app.route('/comentario/ver/<int:folio>', methods=['GET', 'POST'])
     @login_required
-    def ver_anotacion(folio):
-        anotacion = Anotacion.query.get_or_404(folio)
+    def ver_comentario(folio):
+        comentario = Comentario.query.get_or_404(folio)
 
         # --- Medida de seguridad simplificada ---
-        funcionario_de_anotacion = anotacion.funcionario
+        funcionario_del_comentario = comentario.funcionario
 
-        es_el_funcionario = (current_user.id == funcionario_de_anotacion.id)
+        es_el_funcionario = (current_user.id == funcionario_del_comentario.id)
         es_admin = (current_user.rol.nombre == 'Admin')
         # Usamos nuestra función de ayuda
-        es_superior = es_superior_jerarquico(current_user, funcionario_de_anotacion)
+        es_superior = es_superior_jerarquico(current_user, funcionario_del_comentario)
 
         # Permitir acceso si es el funcionario, un admin, o CUALQUIER superior en la cadena de mando
         if not (es_el_funcionario or es_admin or es_superior):
@@ -848,29 +936,29 @@ def create_app():
         if request.method == 'POST':
             # Verificamos que el checkbox 'tomo_conocimiento' haya sido marcado
             if 'tomo_conocimiento' in request.form:
-                # Actualizamos el estado de la anotación
-                anotacion.estado = 'Aceptada'
-                anotacion.fecha_aceptacion = datetime.now() # Guardamos fecha y hora
+                # Actualizamos el estado del comentario
+                comentario.estado = 'Aceptada'
+                comentario.fecha_aceptacion = datetime.now() # Guardamos fecha y hora
                 
                 # Guardamos las observaciones del funcionario (si las hay)
                 observaciones = request.form.get('observacion_funcionario')
-                anotacion.observacion_funcionario = observaciones if observaciones else "Sin observaciones."
+                comentario.observacion_funcionario = observaciones if observaciones else "Sin observaciones."
 
                 # --- ¡REGISTRAR LOG! ---
                 detalles_log = (f"Funcionario {current_user.nombre_completo} (ID: {current_user.id}) "
-                            f"aceptó la anotación Folio: {anotacion.folio}.")
-                registrar_log(accion="Aceptación de Anotación", detalles=detalles_log)
+                            f"aceptó el comentario Folio: {comentario.folio}.")
+                registrar_log(accion="Aceptación de Comentario", detalles=detalles_log)
                 # ------------------------
-                # Guardamos los cambios en la base de datos (anotación y log)
+                # Guardamos los cambios en la base de datos (comentario y log)
                 db.session.commit()
 
-                flash('Has confirmado la lectura de la anotación.', 'success')
-                return redirect(url_for('mi_hoja_de_vida'))
+                flash('Has confirmado la lectura del comentario.', 'success')
+                return redirect(url_for('mi_libro_novedades'))
             else:
                 flash('Debes marcar la casilla "Tomo conocimiento" para confirmar.', 'warning')
         
         # Si es GET, simplemente mostramos la página con los detalles
-        return render_template('ver_anotacion.html', anotacion=anotacion)
+        return render_template('ver_comentario.html', comentario=comentario)
     
     @app.route('/cambiar_clave', methods=['GET', 'POST'])
     @login_required
@@ -950,10 +1038,10 @@ def create_app():
         # Medida de seguridad: Solo el propio funcionario, su jefe, o un admin pueden generar el PDF.
         funcionario = Usuario.query.get_or_404(funcionario_id)
         es_el_funcionario = (current_user.id == funcionario.id)
-        es_el_jefe_directo = (current_user.id == funcionario.jefe_directo_id)
+        es_superior = es_superior_jerarquico(current_user, funcionario)
         es_admin = (current_user.rol.nombre == 'Admin')
 
-        if not (es_el_funcionario or es_el_jefe_directo or es_admin):
+        if not (es_el_funcionario or es_superior or es_admin):
             abort(403)
 
         # --- INICIO: Lógica de Filtros para el PDF ---
@@ -962,30 +1050,30 @@ def create_app():
         fecha_inicio_str = request.args.get('fecha_inicio', '')
         fecha_fin_str = request.args.get('fecha_fin', '')
 
-        # Empezamos con la consulta base de todas las anotaciones del funcionario
-        query = Anotacion.query.filter_by(funcionario_id=funcionario.id)
+        # Empezamos con la consulta base de todos los comentarios del funcionario
+        query = Comentario.query.filter_by(funcionario_id=funcionario.id)
 
         # Aplicamos los filtros si se proporcionaron
         if tipo_filtro:
-            query = query.filter(Anotacion.tipo == tipo_filtro)
+            query = query.filter(Comentario.tipo == tipo_filtro)
         
         if factor_filtro:
-            query = query.join(Anotacion.subfactor).filter(SubFactor.factor_id == factor_filtro)
+            query = query.join(Comentario.subfactor).filter(SubFactor.factor_id == factor_filtro)
         # ¡NUEVO! Aplicar filtros de fecha si se proporcionaron
         try:
             if fecha_inicio_str:
                 fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
-                query = query.filter(Anotacion.fecha_creacion >= fecha_inicio)
+                query = query.filter(Comentario.fecha_creacion >= fecha_inicio)
             if fecha_fin_str:
                 fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
-                query = query.filter(Anotacion.fecha_creacion <= fecha_fin)
+                query = query.filter(Comentario.fecha_creacion <= fecha_fin)
         except ValueError:
             flash("Formato de fecha inválido. Por favor, usa YYYY-MM-DD.", "danger")
             # Podríamos redirigir o manejar el error de otra forma
-            return redirect(request.referrer or url_for('mi_hoja_de_vida')) # Vuelve a la página anterior
+            return redirect(request.referrer or url_for('mi_libro_novedades')) # Vuelve a la página anterior
         
-        # Obtenemos las anotaciones filtradas y ordenadas
-        anotaciones = query.order_by(Anotacion.fecha_creacion.asc()).all()
+        # Obtenemos los comentarios filtrados y ordenados por fecha ascendente
+        comentarios = query.order_by(Comentario.fecha_creacion.asc()).all()
         # --- FIN: Lógica de Filtros ---
         # (Opcional) Pasar las fechas al template del PDF para mostrarlas
         periodo_reporte = ""
@@ -998,9 +1086,9 @@ def create_app():
         fecha_actual = date.today().strftime('%d/%m/%Y')
 
         # Renderizamos la plantilla HTML con los datos (ya filtrados)
-        html_renderizado = render_template('reporte_hoja_de_vida.html', 
+        html_renderizado = render_template('reporte_libro_novedades.html', 
                                         funcionario=funcionario, 
-                                        anotaciones=anotaciones,
+                                        comentarios=comentarios,
                                         fecha_actual=fecha_actual,
                                         periodo_reporte=periodo_reporte)
 
@@ -1010,7 +1098,7 @@ def create_app():
         # Devolvemos el PDF al navegador
         return Response(pdf,
                         mimetype='application/pdf',
-                        headers={'Content-Disposition': f'attachment;filename=hoja_de_vida_{funcionario.rut}.pdf'})
+                        headers={'Content-Disposition': f'attachment;filename=libro_novedades_{funcionario.rut}.pdf'})
     
     @app.route('/api/unidades/<int:establecimiento_id>')
     @login_required
@@ -1036,95 +1124,7 @@ def create_app():
     
     return app
 
-def enviar_correo_reseteo(usuario, token):
-    remitente = os.getenv("EMAIL_USUARIO")
-    contrasena = os.getenv("EMAIL_CONTRASENA")
 
-    if not remitente or not contrasena:
-        print("ERROR: Asegúrate de que EMAIL_USUARIO y EMAIL_CONTRASENA están en tu archivo .env")
-        return
-
-    msg = MIMEMultipart()
-    msg['Subject'] = 'Restablecimiento de Contraseña - Sistema Hoja de Vida'
-    msg['From'] = f"Sistema Hoja de Vida <{remitente}>"
-    msg['To'] = usuario.email # Adaptado a nuestro objeto Usuario
-
-    url_reseteo = url_for('resetear_clave', token=token, _external=True)
-    cuerpo_html = f"""
-    <p>Hola {usuario.nombre_completo},</p>
-    <p>Hemos recibido una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
-    <p><a href="{url_reseteo}" style="padding: 10px 15px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Restablecer mi contraseña</a></p>
-    <p>Si no solicitaste esto, puedes ignorar este correo.</p>
-    <p>El enlace expirará en 1 hora.</p>
-    """
-    msg.attach(MIMEText(cuerpo_html, 'html'))
-
-    try:
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(remitente, contrasena)
-            server.send_message(msg)
-            print(f"Correo de reseteo enviado exitosamente a {usuario.email}")
-    except Exception as e:
-        print(f"Error al enviar correo de reseteo: {e}")
-
-def enviar_correo_notificacion_anotacion(anotacion):
-    """Envía un correo al funcionario notificándole de una nueva anotación."""
-    remitente = os.getenv("EMAIL_USUARIO")
-    contrasena = os.getenv("EMAIL_CONTRASENA")
-    
-    if not remitente or not contrasena:
-        print("ERROR: Credenciales de correo no configuradas en .env")
-        return
-
-    # Obtenemos los datos del destinatario y del emisor desde el objeto anotacion
-    funcionario = anotacion.funcionario
-    jefe = anotacion.jefe
-
-    msg = MIMEMultipart()
-    msg['Subject'] = f"Nueva Anotación en tu Hoja de Vida - Folio #{anotacion.folio}"
-    msg['From'] = f"Sistema Hoja de Vida <{remitente}>"
-    msg['To'] = funcionario.email
-    
-    # URL a la página de login
-    url_sistema = url_for('login', _external=True)
-
-    cuerpo_html = f"""
-    <p>Hola {funcionario.nombre_completo},</p>
-    <p>Has recibido una nueva anotación de tipo <strong>{anotacion.tipo}</strong> en tu Hoja de Vida, creada por <strong>{jefe.nombre_completo}</strong>.</p>
-    <p>Para revisar los detalles, por favor ingresa al sistema:</p>
-    <p><a href="{url_sistema}" style="padding: 10px 15px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Ingresar al Sistema</a></p>
-    <p>Este es un correo generado automáticamente, por favor no respondas a esta dirección.</p>
-    """
-    msg.attach(MIMEText(cuerpo_html, 'html'))
-    
-    try:
-        # Usamos 'with' para asegurar que la conexión se cierre correctamente
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(remitente, contrasena)
-            server.send_message(msg)
-            print(f"Correo de notificación enviado exitosamente a {funcionario.email}")
-    except Exception as e:
-        print(f"Error al enviar correo de notificación: {e}")
-
-def registrar_log(accion, detalles=""):
-    """
-    Crea y añade un nuevo registro de log a la sesión de la base de datos.
-    Nota: No hace commit aquí; el commit se debe hacer en la ruta principal.
-    """
-    # Intentamos obtener el usuario actual. Si no hay nadie logueado (ej: script), ponemos None.
-    user_id = current_user.id if current_user.is_authenticated else None
-    user_name = current_user.nombre_completo if current_user.is_authenticated else "Sistema"
-
-    nuevo_log = Log(
-        usuario_id=user_id,
-        usuario_nombre=user_name,
-        accion=accion,
-        detalles=detalles
-    )
-    db.session.add(nuevo_log)
-    # El db.session.commit() se hará en la ruta que llama a esta función.
     
 # --- USER LOADER ---
 # Esta función es crucial. Flask-Login la usa para recargar el objeto de usuario 

@@ -10,7 +10,7 @@
             <p class="text-gray-500">Bienvenido, {{ current_user.nombre_completo }}</p>
         </div>
         <div>
-            <a href="{{ url_for('mi_hoja_de_vida') }}" class="btn btn-secondary">Ver Mi Hoja de Vida</a>
+            <a href="{{ url_for('mi_libro_novedades') }}" class="btn btn-secondary">Ver Mi Libro de Novedades</a>
             <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
@@ -38,12 +38,12 @@
                     <td class="py-3 px-4">{{ funcionario.rut }}</td>
                     <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center flex justify-center gap-2">
-                        <a href="{{ url_for('ver_hoja_de_vida_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Hoja de Vida</a>
+                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
                         
                         {% if funcionario.activo %}
-                            <a href="{{ url_for('crear_anotacion', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Anotación</a>
+                            <a href="{{ url_for('crear_comentario', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Comentario</a>
                         {% else %}
-                            <span class="btn btn-primary opacity-50 cursor-not-allowed" title="No se pueden crear anotaciones a usuarios inactivos">Crear Anotación</span>
+                            <span class="btn btn-primary opacity-50 cursor-not-allowed" title="No se pueden crear comentarios a usuarios inactivos">Crear Comentario</span>
                         {% endif %}
                     </td>
                 </tr>
