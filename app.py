@@ -16,7 +16,7 @@ from werkzeug.security import check_password_hash
 from functools import wraps
 from weasyprint import HTML
 from sqlalchemy import or_
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 # Inicializamos el gestor de logins
 login_manager = LoginManager()
@@ -1019,6 +1019,20 @@ def create_app():
         # Convertimos la lista de objetos a un formato JSON que JS pueda leer
         unidades_lista = [{'id': u.id, 'nombre': u.nombre} for u in unidades]
         return jsonify(unidades_lista)
+    
+    # --- MANEJADOR DE ERROR CSRF ---
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        """
+        Captura los errores de token CSRF (ej. tokens vencidos en pestañas viejas)
+        y redirige al usuario al login con un mensaje amigable.
+        """
+        # 1. Preparamos el mensaje amigable
+        flash('Por favor, ingresa nuevamente.', 'warning')
+        
+        # 2. Redirigimos a la página de login
+        return redirect(url_for('login'))
+    # --- FIN MANEJADOR ---
     
     return app
 
