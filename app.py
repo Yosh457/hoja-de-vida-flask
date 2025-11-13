@@ -530,14 +530,24 @@ def create_app():
         # Aplicar filtros
         if usuario_filtro_id:
             query = query.filter(Log.usuario_id == usuario_filtro_id)
-        # if accion_filtro: # Ejemplo si quisiéramos filtrar por acción
-        #     query = query.filter(Log.accion.ilike(f'%{accion_filtro}%'))
+        if accion_filtro:
+            query = query.filter(Log.accion == accion_filtro)
             
         # Paginamos los resultados
         logs_pagination = query.paginate(page=page, per_page=15, error_out=False) # Mostramos 15 logs por página
 
         # Obtenemos todos los usuarios para el menú desplegable del filtro
         todos_los_usuarios = Usuario.query.order_by(Usuario.nombre_completo).all()
+
+        # --- ¡NUEVO! Definimos las acciones posibles ---
+        acciones_posibles = [
+            "Inicio de Sesión",
+            "Cierre de Sesión",
+            "Creación de Comentario",
+            "Aceptación de Comentario",
+            "Activación de Usuario",
+            "Desactivación de Usuario"
+        ]
         
         # Creamos un diccionario con los filtros actuales para pasarlo a la plantilla
         filtros_actuales = {
@@ -548,6 +558,7 @@ def create_app():
         return render_template('ver_logs.html',
                             pagination=logs_pagination,
                             todos_los_usuarios=todos_los_usuarios,
+                            acciones_posibles=acciones_posibles,
                             filtros=filtros_actuales)
 
     # --- RUTAS DE USUARIO (FUNCIONARIO / JEFE) ---

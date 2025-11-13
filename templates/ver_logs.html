@@ -10,6 +10,7 @@
     </div>
 
     <form method="get" action="{{ url_for('ver_logs') }}" class="bg-gray-50 p-4 rounded-lg mb-6 flex items-center gap-4">
+        
         <div class="flex-1">
             <label for="filtro_usuario" class="block text-sm font-medium text-gray-700">Filtrar por Usuario:</label>
             <select name="usuario_id" id="filtro_usuario" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -19,12 +20,22 @@
                 {% endfor %}
             </select>
         </div>
+
+        <div class="flex-1">
+            <label for="filtro_accion" class="block text-sm font-medium text-gray-700">Filtrar por Acción:</label>
+            <select name="accion" id="filtro_accion" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                <option value="">Todas las acciones</option>
+                {% for accion in acciones_posibles %}
+                    <option value="{{ accion }}" {% if accion == filtros.accion %}selected{% endif %}>{{ accion }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="flex items-end h-full">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('ver_logs') }}" class="btn btn-secondary ml-2">Limpiar</a>
         </div>
     </form>
-
     <table class="min-w-full bg-white">
         <thead class="bg-gray-100">
             <tr>
