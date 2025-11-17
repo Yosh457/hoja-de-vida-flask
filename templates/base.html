@@ -13,7 +13,7 @@
 
 <body class="flex flex-col min-h-screen bg-gray-100">
 
-    {% if request.endpoint not in ['login', 'solicitar_reseteo', 'resetear_clave', 'cambiar_clave'] %}
+    {% if request.endpoint not in ['auth.login', 'auth.solicitar_reseteo', 'auth.resetear_clave', 'auth.cambiar_clave'] %}
     <header class="w-full bg-white shadow-md p-4">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <img src="{{ url_for('static', filename='Logo Red APS 2.png') }}" 

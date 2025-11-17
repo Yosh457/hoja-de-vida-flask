@@ -6,10 +6,10 @@
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-7xl mx-auto my-12">
     <div class="flex justify-between items-center mb-6 border-b pb-4">
         <h2 class="text-2xl font-bold text-gray-800">Logs de Auditoría del Sistema</h2>
-        <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">Volver al Panel</a>
+        <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-secondary">Volver al Panel</a>
     </div>
 
-    <form method="get" action="{{ url_for('ver_logs') }}" class="bg-gray-50 p-4 rounded-lg mb-6 flex items-center gap-4">
+    <form method="get" action="{{ url_for('admin.ver_logs') }}" class="bg-gray-50 p-4 rounded-lg mb-6 flex items-center gap-4">
         
         <div class="flex-1">
             <label for="filtro_usuario" class="block text-sm font-medium text-gray-700">Filtrar por Usuario:</label>
@@ -33,7 +33,7 @@
 
         <div class="flex items-end h-full">
             <button type="submit" class="btn btn-primary">Filtrar</button>
-            <a href="{{ url_for('ver_logs') }}" class="btn btn-secondary ml-2">Limpiar</a>
+            <a href="{{ url_for('admin.ver_logs') }}" class="btn btn-secondary ml-2">Limpiar</a>
         </div>
     </form>
     <table class="min-w-full bg-white">
@@ -61,6 +61,6 @@
         </tbody>
     </table>
 
-    {{ render_pagination(pagination, 'ver_logs') }}
+    {{ render_pagination(pagination, 'admin.ver_logs') }}
 </div>
 {% endblock %}

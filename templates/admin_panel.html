@@ -10,13 +10,12 @@
             <p class="text-gray-500">Administra los usuarios del sistema.</p>
         </div>
         <div>
-            <a href="{{ url_for('ver_logs') }}" class="btn btn-secondary">Ver Logs</a>
-            <a href="{{ url_for('crear_usuario') }}" class="btn btn-primary">Crear Nuevo Usuario</a>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
+            <a href="{{ url_for('admin.ver_logs') }}" class="btn btn-secondary">Ver Logs</a>
+            <a href="{{ url_for('admin.crear_usuario') }}" class="btn btn-primary">Crear Nuevo Usuario</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
-
-    <form method="get" action="{{ url_for('admin_panel') }}" class="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+    <form method="get" action="{{ url_for('admin.admin_panel') }}" class="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
         <div class="md:col-span-2">
             <label for="busqueda" class="block text-sm font-medium text-gray-700">Buscar por Nombre o Email:</label>
             <input type="text" name="busqueda" id="busqueda" value="{{ busqueda or '' }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
@@ -48,7 +47,7 @@
             </select>
         </div>
         <div class="flex gap-2">
-            <a href="{{ url_for('admin_panel') }}" class="w-full btn btn-secondary">Limpiar</a>
+            <a href="{{ url_for('admin.admin_panel') }}" class="w-full btn btn-secondary">Limpiar</a>
             <button type="submit" class="w-full btn btn-primary">Buscar</button>
         </div>
     </form>
@@ -80,8 +79,8 @@
                     {% endif %}
                 </td>
                 <td class="py-3 px-4 text-center flex justify-center gap-2">
-                    <a href="{{ url_for('editar_usuario', id=usuario.id) }}" class="btn btn-secondary">Editar</a>
-                    <form action="{{ url_for('toggle_activo', id=usuario.id) }}" method="POST">
+                    <a href="{{ url_for('admin.editar_usuario', id=usuario.id) }}" class="btn btn-secondary">Editar</a>
+                    <form action="{{ url_for('admin.toggle_activo', id=usuario.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         {% if usuario.activo %}
                             <button type="submit" class="btn btn-warning">Desactivar</button>
@@ -99,6 +98,6 @@
         </tbody>
     </table>
 
-    {{ render_pagination(pagination, 'admin_panel') }}
+    {{ render_pagination(pagination, 'admin.admin_panel') }}
 </div>
 {% endblock %}

@@ -10,16 +10,16 @@
             <p class="text-gray-500">Bienvenido, {{ current_user.nombre_completo }}</p>
         </div>
         <div>
-            <a href="{{ url_for('mi_libro_novedades') }}" class="btn btn-secondary">Ver Mi Libro de Novedades</a>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
+            <a href="{{ url_for('libro.mi_libro_novedades') }}" class="btn btn-secondary">Ver Mi Libro de Novedades</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
 
     <div>
         <h3 class="text-xl font-semibold text-gray-700 mb-4">Funcionarios a mi cargo</h3>
-        <form method="get" action="{{ url_for('panel_encargado_unidad') }}" class="mb-6 bg-gray-50 p-4 rounded-lg flex items-center gap-4">
+        <form method="get" action="{{ url_for('unidad.panel_encargado_unidad') }}" class="mb-6 bg-gray-50 p-4 rounded-lg flex items-center gap-4">
             <input type="text" name="busqueda" value="{{ busqueda or '' }}" placeholder="Buscar por Nombre o RUT..." class="flex-grow px-4 py-2 border border-gray-300 rounded-lg">
-            <a href="{{ url_for('panel_encargado_unidad') }}" class="btn btn-secondary">Limpiar</a>
+            <a href="{{ url_for('unidad.panel_encargado_unidad') }}" class="btn btn-secondary">Limpiar</a>
             <button type="submit" class="btn btn-primary">Buscar</button>
         </form>
         <table class="min-w-full bg-white">
@@ -38,10 +38,10 @@
                     <td class="py-3 px-4">{{ funcionario.rut }}</td>
                     <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center flex justify-center gap-2">
-                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
+                        <a href="{{ url_for('libro.ver_libro_novedades_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
                         
                         {% if funcionario.activo %}
-                            <a href="{{ url_for('crear_comentario', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Comentario</a>
+                            <a href="{{ url_for('libro.crear_comentario', funcionario_id=funcionario.id) }}" class="btn btn-primary">Crear Comentario</a>
                         {% else %}
                             <span class="btn btn-primary opacity-50 cursor-not-allowed" title="No se pueden crear comentarios a usuarios inactivos">Crear Comentario</span>
                         {% endif %}
@@ -54,7 +54,7 @@
                 {% endfor %}
             </tbody>
         </table>
-        {{ render_pagination(pagination, 'panel_encargado_unidad') }}
+        {{ render_pagination(pagination, 'unidad.panel_encargado_unidad') }}
     </div>
 </div>
 {% endblock %}

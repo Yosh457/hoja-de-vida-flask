@@ -13,9 +13,9 @@
         <div>
             {# --- LÓGICA DE "VOLVER" DINÁMICA --- #}
             {% if current_user.rol.nombre == 'Jefa Salud' %}
-                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
+                <a href="{{ url_for('jefa_salud.panel_jefa_salud') }}" class="btn btn-secondary">Volver al Panel</a>
             {% elif current_user.rol.nombre == 'Encargado de Recinto' %}
-                <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Volver al Panel</a>
+                <a href="{{ url_for('recinto.panel_encargado_recinto') }}" class="btn btn-secondary">Volver al Panel</a>
             {% endif %}
         </div>
     </div>
@@ -37,7 +37,7 @@
                     <td class="py-3 px-4">{{ funcionario.rut }}</td>
                     <td class="py-3 px-4">{{ funcionario.unidad.nombre }}</td>
                     <td class="py-3 px-4 text-center">
-                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
+                        <a href="{{ url_for('libro.ver_libro_novedades_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-secondary">Ver Libro de Novedades</a>
                     </td>
                 </tr>
                 {% else %}
@@ -49,7 +49,7 @@
             </tbody>
         </table>
         {# --- PAGINACIÓN CORREGIDA --- #}
-        {{ render_pagination(pagination, 'ver_equipo_encargado', extra_args={'encargado_id': encargado.id}) }}
+        {{ render_pagination(pagination, 'libro.ver_equipo_encargado', extra_args={'encargado_id': encargado.id}) }}
     </div>
 </div>
 {% endblock %}

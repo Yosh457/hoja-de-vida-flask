@@ -41,7 +41,7 @@
                     </div>
 
                     <div class="flex justify-end gap-4 pt-6 mt-4">
-                        <a href="{{ url_for('mi_libro_novedades') }}" class="btn btn-secondary">Volver</a>
+                        <a href="{{ url_for('libro.mi_libro_novedades') }}" class="btn btn-secondary">Volver</a>
                         <button type="submit" id="submit-btn" class="btn btn-primary" disabled>Confirmar Comentario</button>
                     </div>
                 </form>
@@ -57,9 +57,9 @@
                 {% endif %}
                 <div class="flex justify-end pt-6 mt-4">
                     {% if current_user.id == comentario.funcionario_id %}
-                        <a href="{{ url_for('mi_libro_novedades') }}" class="btn btn-secondary">Volver</a>
+                        <a href="{{ url_for('libro.mi_libro_novedades') }}" class="btn btn-secondary">Volver</a>
                     {% else %}
-                        <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=comentario.funcionario_id) }}" class="btn btn-secondary">Volver</a>
+                        <a href="{{ url_for('libro.ver_libro_novedades_funcionario', funcionario_id=comentario.funcionario_id) }}" class="btn btn-secondary">Volver</a>
                     {% endif %}
                 </div>
             {% endif %}
@@ -75,9 +75,9 @@
             <p class="text-sm text-gray-500 mt-4">Confirmada el: {{ comentario.fecha_aceptacion.strftime('%d-%m-%Y a las %H:%M:%S') }}</p>
             <div class="flex justify-end pt-6 mt-4">
                 {% if current_user.id == comentario.funcionario_id %}
-                    <a href="{{ url_for('mi_libro_novedades') }}" class="btn btn-secondary">Volver</a>
+                    <a href="{{ url_for('libro.mi_libro_novedades') }}" class="btn btn-secondary">Volver</a>
                 {% else %}
-                    <a href="{{ url_for('ver_libro_novedades_funcionario', funcionario_id=comentario.funcionario_id) }}" class="btn btn-secondary">Volver</a>
+                    <a href="{{ url_for('libro.ver_libro_novedades_funcionario', funcionario_id=comentario.funcionario_id) }}" class="btn btn-secondary">Volver</a>
                 {% endif %}
             </div>
         </div>

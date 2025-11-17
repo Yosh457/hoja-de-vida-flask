@@ -44,16 +44,16 @@
 
         <div class="flex justify-end gap-4 pt-6 border-t mt-8">
             {% if current_user.rol.nombre == 'Jefa Salud' %}
-                <a href="{{ url_for('panel_jefa_salud') }}" class="btn btn-secondary">Cancelar</a>
+                <a href="{{ url_for('jefa_salud.panel_jefa_salud') }}" class="btn btn-secondary">Cancelar</a>
             
             {% elif current_user.rol.nombre == 'Encargado de Recinto' %}
-                <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Cancelar</a>
+                <a href="{{ url_for('recinto.panel_encargado_recinto') }}" class="btn btn-secondary">Cancelar</a>
 
             {% elif current_user.rol.nombre == 'Encargado de Unidad' %}
-                <a href="{{ url_for('panel_encargado_unidad') }}" class="btn btn-secondary">Cancelar</a>
+                <a href="{{ url_for('unidad.panel_encargado_unidad') }}" class="btn btn-secondary">Cancelar</a>
             
             {% else %} {# Fallback para Admin #}
-                <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">Cancelar</a>
+                <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-secondary">Cancelar</a>
             {% endif %}
             
             <button type="submit" class="btn btn-primary">Crear Comentario</button>

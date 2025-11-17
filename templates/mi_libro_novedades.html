@@ -11,16 +11,16 @@
         </div>
         <div class="flex items-center gap-4">
             <button class="btn btn-primary open-report-modal"
-                    data-pdf-url="{{ url_for('generar_pdf', funcionario_id=current_user.id if 'mi_libro_novedades' in request.endpoint else funcionario.id) }}"
+                    data-pdf-url="{{ url_for('libro.generar_pdf', funcionario_id=current_user.id if 'mi_libro_novedades' in request.endpoint else funcionario.id) }}"
                     data-factores='{{ factores_para_filtro|tojson|safe }}'>
                 Generar Reporte PDF
             </button>
             {% if current_user.rol.nombre == 'Encargado de Recinto' %}
-                <a href="{{ url_for('panel_encargado_recinto') }}" class="btn btn-secondary">Volver al Panel</a>
+                <a href="{{ url_for('recinto.panel_encargado_recinto') }}" class="btn btn-secondary">Volver al Panel</a>
             {% elif current_user.rol.nombre == 'Encargado de Unidad' %}
-                <a href="{{ url_for('panel_encargado_unidad') }}" class="btn btn-secondary">Volver al Panel</a>
+                <a href="{{ url_for('unidad.panel_encargado_unidad') }}" class="btn btn-secondary">Volver al Panel</a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Cerrar Sesión</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Cerrar Sesión</a>
         </div>
     </div>
 
@@ -47,7 +47,7 @@
                         </td>
                         <td class="py-3 px-4">{{ comentario.jefe.nombre_completo }}</td>
                         <td class="py-3 px-4 text-center">
-                            <a href="{{ url_for('ver_comentario', folio=comentario.folio) }}" class="btn btn-primary">Ver y Responder</a>
+                            <a href="{{ url_for('libro.ver_comentario', folio=comentario.folio) }}" class="btn btn-primary">Ver y Responder</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -131,13 +131,13 @@
                             <span class="bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Aceptada</span>
                         </td>
                         <td class="py-3 px-4 text-center">
-                            <a href="{{ url_for('ver_comentario', folio=comentario.folio) }}" class="btn btn-secondary">Ver Detalle</a>
+                            <a href="{{ url_for('libro.ver_comentario', folio=comentario.folio) }}" class="btn btn-secondary">Ver Detalle</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            {{ render_pagination(historial_pagination, 'mi_libro_novedades') }}
+            {{ render_pagination(historial_pagination, 'libro.mi_libro_novedades') }}
         {% else %}
             <div class="bg-gray-50 p-6 rounded-lg text-center">
                 <p class="text-gray-600">Aún no tienes un historial de comentarios.</p>
