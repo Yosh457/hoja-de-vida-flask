@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, jsonify, abort
 from flask_login import login_required, current_user
 from datetime import date, datetime
+import pytz
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
@@ -157,6 +158,8 @@ def crear_comentario(funcionario_id):
             return redirect(url_for('libro.mi_libro_novedades'))
 
     if request.method == 'POST':
+        # Definir zona horaria
+        chile_tz = pytz.timezone('America/Santiago')
         tipo = request.form.get('tipo')
         subfactor_id = request.form.get('subfactor_id')
         motivo = request.form.get('motivo_jefe')
@@ -164,7 +167,7 @@ def crear_comentario(funcionario_id):
         nuevo_comentario = Comentario(
             tipo=tipo,
             motivo_jefe=motivo,
-            fecha_creacion=date.today(),
+            fecha_creacion=datetime.now(chile_tz).date(),
             funcionario_id=funcionario.id,
             jefe_id=current_user.id,
             subfactor_id=subfactor_id
@@ -214,8 +217,10 @@ def ver_comentario(folio):
 
     if request.method == 'POST':
         if 'tomo_conocimiento' in request.form:
+            # Definir zona horaria
+            chile_tz = pytz.timezone('America/Santiago')
             comentario.estado = 'Aceptada'
-            comentario.fecha_aceptacion = datetime.now()
+            comentario.fecha_aceptacion = datetime.now(chile_tz).replace(tzinfo=None)
             observaciones = request.form.get('observacion_funcionario')
             comentario.observacion_funcionario = observaciones if observaciones else "Sin observaciones."
 

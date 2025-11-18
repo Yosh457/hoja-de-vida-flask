@@ -4,6 +4,7 @@ from flask import (
 )
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta
+import pytz
 import secrets
 
 # Importamos las dependencias
@@ -15,9 +16,6 @@ auth_bp = Blueprint(
     'auth', __name__,
     template_folder='../templates' # Le decimos dónde buscar los templates
 )
-
-# 2. Movemos todas las rutas de autenticación aquí
-# y cambiamos @app.route por @auth_bp.route
 
 # --- DICCIONARIO DE REDIRECCIONES ---
 # Define a dónde va cada rol. Si agregas un rol nuevo, solo editas esto.
@@ -34,6 +32,8 @@ def obtener_ruta_redireccion(usuario):
     endpoint = RUTAS_POR_ROL.get(usuario.rol.nombre, RUTAS_POR_ROL["default"])
     return url_for(endpoint)
 
+# 2. Movemos todas las rutas de autenticación aquí
+# y cambiamos @app.route por @auth_bp.route
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     # 1. Redirección inteligente si ya está logueado
@@ -95,7 +95,9 @@ def solicitar_reseteo():
         usuario = Usuario.query.filter_by(email=email).first()
         if usuario:
             token = secrets.token_hex(16)
-            expiracion = datetime.utcnow() + timedelta(hours=1)
+            chile_tz = pytz.timezone('America/Santiago')
+            ahora_chile = datetime.now(chile_tz).replace(tzinfo=None)
+            expiracion = ahora_chile + timedelta(hours=1)
             usuario.reset_token = token
             usuario.reset_token_expiracion = expiracion
             db.session.commit()
@@ -109,7 +111,9 @@ def solicitar_reseteo():
 @auth_bp.route('/resetear-clave/<token>', methods=['GET', 'POST'])
 def resetear_clave(token):
     usuario = Usuario.query.filter_by(reset_token=token).first()
-    if not usuario or usuario.reset_token_expiracion < datetime.utcnow():
+    chile_tz = pytz.timezone('America/Santiago')
+    ahora_chile = datetime.now(chile_tz).replace(tzinfo=None)
+    if not usuario or usuario.reset_token_expiracion < ahora_chile:
         flash('El enlace de reseteo es inválido o ha expirado.', 'danger')
         return redirect(url_for('auth.solicitar_reseteo'))
     if request.method == 'POST':
